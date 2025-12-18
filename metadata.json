@@ -1,0 +1,5 @@
+{
+  "name": "售前汇报智能复盘",
+  "description": "A professional quality assurance tool for pre-sales presentations using Gemini 3 reasoning to analyze transcripts against specific success criteria.",
+  "requestFramePermissions": []
+}
