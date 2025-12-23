@@ -54,7 +54,7 @@ const CustomRadarChart: React.FC<Props> = ({ data }) => {
 
   return (
     <div className="w-full h-80">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
         <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>
           <PolarGrid stroke="#e2e8f0" strokeDasharray="4 4" />
           <PolarAngleAxis 

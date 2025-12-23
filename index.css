@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #F5F6F7;
+  color: #1F2329;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.feishu-shadow {
+  box-shadow: 0 4px 12px rgba(31, 35, 41, 0.08);
+}

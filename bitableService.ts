@@ -24,15 +24,10 @@ export const createBitableRecord = async (
       dimensionMap[key] = dim.score;
     });
 
-    // 生成包含完整数据的分享链接
-    const reportLink = generateShareableLink(analysisResult, title);
-
-    // 构造发送给 Webhook 的数据
-    // 注意：这里的数据结构需要与飞书自动化流程中配置的接收格式一致
-    // 建议在飞书自动化中选择 "Webhook 触发" -> "接收 JSON 数据"
-    const webhookData = {
+    // 构造基础数据
+    const reportData = {
       [BITABLE_FIELDS.TITLE]: title,
-      [BITABLE_FIELDS.CREATED_TIME]: new Date().toISOString(), // Webhook 通常接受 ISO 字符串
+      [BITABLE_FIELDS.CREATED_TIME]: new Date().toISOString(),
       [BITABLE_FIELDS.ANALYST]: analyst,
       [BITABLE_FIELDS.TOTAL_SCORE]: analysisResult.totalScore,
       [BITABLE_FIELDS.SCORE_LEVEL]: getScoreLevel(analysisResult.totalScore),
@@ -44,11 +39,14 @@ export const createBitableRecord = async (
       [BITABLE_FIELDS.EXECUTIVE_SUMMARY]: analysisResult.executiveSummary,
       [BITABLE_FIELDS.GROWTH_SUGGESTION]: analysisResult.generalSuggestions,
       [BITABLE_FIELDS.DIFFICULT_QUESTIONS_COUNT]: analysisResult.difficultQuestions?.length || 0,
-      [BITABLE_FIELDS.REPORT_LINK]: reportLink,
+      // 这里的 REPORT_LINK 会由 Edge Function 生成并覆盖
     };
 
+    // 获取当前应用的基础 URL
+    const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+
     const response = await fetch(
-      `${SUPABASE_CONFIG.edgeFunctionUrl}/feishu-proxy/webhook`,
+      `${SUPABASE_CONFIG.edgeFunctionUrl}/feishu-proxy/save-and-webhook`,
       {
         method: 'POST',
         headers: {
@@ -56,26 +54,51 @@ export const createBitableRecord = async (
         },
         body: JSON.stringify({
           webhookUrl: FEISHU_CONFIG.webhookUrl,
-          data: webhookData
+          reportData: reportData,
+          originalData: analysisResult, // 新增：发送原始数据用于存库
+          appUrl: appUrl
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Webhook 调用失败: ${errorText}`);
+      throw new Error(`服务调用失败: ${errorText}`);
     }
 
-    // Webhook 成功触发，返回一个虚拟的 recordId（因为 Webhook 不返回 ID）
-    return { recordId: 'webhook-triggered', reportLink };
+    const result = await response.json();
+    return { recordId: result.reportId, reportLink: result.shortLink };
   } catch (error) {
-    console.error('通过 Webhook 保存记录失败:', error);
+    console.error('保存记录失败:', error);
     throw error;
   }
 };
 
 export const getBitableRecord = async (recordId: string): Promise<any | null> => {
-  // Webhook 模式下不支持获取记录，除非保留原有的 API 逻辑
-  console.warn("Webhook 模式不支持直接通过 ID 获取记录");
-  return null;
+  try {
+    const response = await fetch(
+      `${SUPABASE_CONFIG.edgeFunctionUrl}/feishu-proxy/get-report?id=${recordId}`,
+      {
+        method: 'GET',
+      }
+    );
+
+    if (!response.ok) {
+      console.error('获取报告失败:', response.statusText);
+      return null;
+    }
+
+    const result = await response.json();
+    
+    // Edge Function 返回格式: { data: { id, title, data: AnalysisResult, ... } }
+    // 我们需要返回内部的 AnalysisResult
+    if (result.data && result.data.data) {
+      return result.data.data;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('获取报告异常:', error);
+    return null;
+  }
 };
