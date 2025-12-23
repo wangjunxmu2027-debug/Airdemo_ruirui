@@ -27,12 +27,21 @@ const ReportView: React.FC = () => {
       if (recordId) {
         try {
           const record = await getBitableRecord(recordId);
-          if (record && record.fields.result) {
-            setResult(record.fields.result);
+          // 兼容多种数据结构：
+          // 1. Supabase: record 是 AnalysisResult 对象，或者包含 data 属性
+          // 2. Feishu: record.fields.result
+          const analysisData = record?.fields?.result || record?.data || record;
+          
+          if (analysisData && (analysisData.totalScore !== undefined || analysisData.executiveSummary)) {
+            setResult(analysisData);
+            // 如果是 Supabase 存储的，标题可能在 record.title
+            if (record.title && !title) setTitle(record.title);
           } else {
-            setError('未找到报告数据');
+            console.error('无效的报告数据:', record);
+            setError('未找到有效的报告数据');
           }
         } catch (err) {
+          console.error(err);
           setError('加载报告失败');
         }
       }
