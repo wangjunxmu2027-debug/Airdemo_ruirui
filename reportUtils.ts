@@ -14,6 +14,17 @@ export const generateReportLink = (recordId: string, title: string): string => {
 };
 
 export const parseReportLink = (): { recordId: string | null; title: string | null } => {
+  // 兼容两种模式：
+  // 1. /r/xxx (短链接)
+  // 2. /report?id=xxx&title=xxx (旧模式)
+  
+  const path = window.location.pathname;
+  // 处理 /r/xxx
+  const rMatch = path.match(/\/r\/([^/]+)/);
+  if (rMatch) {
+    return { recordId: rMatch[1], title: null };
+  }
+
   const params = new URLSearchParams(window.location.search);
   return {
     recordId: params.get('id'),

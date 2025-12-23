@@ -11,7 +11,7 @@ if (!rootElement) {
 
 const root = ReactDOM.createRoot(rootElement);
 
-const isReportPage = window.location.pathname === '/report';
+const isReportPage = window.location.pathname === '/report' || window.location.pathname.startsWith('/r/');
 
 root.render(
   <React.StrictMode>
