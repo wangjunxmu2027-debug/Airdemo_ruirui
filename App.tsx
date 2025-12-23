@@ -9,6 +9,8 @@ import { AnalysisResult, AnalysisStatus, AnalysisInput, HistoryItem } from './ty
 import { analyzeTranscript } from './geminiService';
 import { EVALUATION_DIMENSIONS_UI } from './constants';
 import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
+import { createBitableRecord } from './bitableService';
+import { generateShareableLink } from './reportUtils';
 
 function App() {
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
@@ -23,6 +25,11 @@ function App() {
   // Config State
   const [showSettings, setShowSettings] = useState(false);
   const [customPrompt, setCustomPrompt] = useState<string | null>(null);
+
+  // Bitable State
+  const [bitableRecordId, setBitableRecordId] = useState<string | null>(null);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [isSavingToBitable, setIsSavingToBitable] = useState(false);
 
   // Simulation logic for progress steps
   useEffect(() => {
@@ -61,6 +68,22 @@ function App() {
       // Save to History
       const updatedHistory = saveHistoryItem(data, input.title || '未命名分析');
       setHistoryItems(updatedHistory);
+
+      // Save to Bitable
+      setIsSavingToBitable(true);
+      try {
+        const { recordId, reportLink } = await createBitableRecord(
+          data,
+          input.title || '未命名分析',
+          '售前顾问'
+        );
+        setBitableRecordId(recordId);
+        setShareLink(reportLink);
+      } catch (bitableError) {
+        console.error('保存到多维表格失败:', bitableError);
+      } finally {
+        setIsSavingToBitable(false);
+      }
     } catch (err: any) {
       console.error(err);
       setStatus(AnalysisStatus.ERROR);
@@ -255,6 +278,29 @@ function App() {
                   </div>
                   
                   <div className="flex gap-3">
+                    {isSavingToBitable && (
+                      <div className="px-4 py-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        正在保存到多维表格...
+                      </div>
+                    )}
+                    {shareLink && !isSavingToBitable && (
+                      <div className="px-4 py-2 text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        已保存到多维表格
+                        <button
+                          onClick={() => window.open(shareLink, '_blank')}
+                          className="ml-2 text-emerald-700 hover:text-emerald-900 underline"
+                        >
+                          查看记录
+                        </button>
+                      </div>
+                    )}
                     <button 
                       onClick={navToHistory}
                       className="px-4 py-2 text-sm text-feishu-subtext hover:text-feishu-text bg-white border border-feishu-border rounded-lg hover:bg-gray-50 transition-colors"

@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import ReportView from './components/ReportView';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -8,8 +9,11 @@ if (!rootElement) {
 }
 
 const root = ReactDOM.createRoot(rootElement);
+
+const isReportPage = window.location.pathname === '/report';
+
 root.render(
   <React.StrictMode>
-    <App />
+    {isReportPage ? <ReportView /> : <App />}
   </React.StrictMode>
 );

@@ -1,0 +1,114 @@
+import React, { useEffect, useState } from 'react';
+import AnalysisDashboard from './AnalysisDashboard';
+import { AnalysisResult } from '../types';
+import { getBitableRecord } from '../bitableService';
+import { parseReportLink, decodeReportData } from '../reportUtils';
+
+const ReportView: React.FC = () => {
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [title, setTitle] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadReport = async () => {
+      const { recordId, title: urlTitle } = parseReportLink();
+
+      if (!recordId && !urlTitle) {
+        setError('未找到报告参数');
+        setLoading(false);
+        return;
+      }
+
+      if (urlTitle) {
+        setTitle(decodeURIComponent(urlTitle));
+      }
+
+      if (recordId) {
+        try {
+          const record = await getBitableRecord(recordId);
+          if (record && record.fields.result) {
+            setResult(record.fields.result);
+          } else {
+            setError('未找到报告数据');
+          }
+        } catch (err) {
+          setError('加载报告失败');
+        }
+      }
+
+      setLoading(false);
+    };
+
+    loadReport();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-feishu-bg flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-feishu-blue border-t-transparent"></div>
+          <p className="mt-4 text-feishu-subtext">正在加载报告...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !result) {
+    return (
+      <div className="min-h-screen bg-feishu-bg flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-feishu-text mb-2">加载失败</h2>
+          <p className="text-feishu-subtext mb-4">{error || '报告数据不存在'}</p>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="bg-feishu-blue text-white px-6 py-2 rounded-lg hover:bg-feishu-hover transition-colors"
+          >
+            返回首页
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-feishu-bg pb-12">
+      <nav className="bg-white border-b border-feishu-border sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex justify-between h-16 items-center">
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.location.href = '/'}>
+              <div className="bg-feishu-blue rounded-lg p-1.5 shadow-sm">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <span className="text-lg font-semibold text-feishu-text tracking-tight">
+                  售前汇报<span className="text-feishu-subtext font-normal ml-1">智能复盘</span>
+                </span>
+                {title && <p className="text-xs text-feishu-subtext">{title}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-6 py-10">
+        <div className="space-y-6 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-6 bg-feishu-blue rounded-full"></div>
+            <h1 className="text-2xl font-bold text-feishu-text">复盘报告</h1>
+          </div>
+          <AnalysisDashboard result={result} />
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default ReportView;
