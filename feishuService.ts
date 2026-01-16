@@ -1,4 +1,6 @@
 
+import { SUPABASE_CONFIG } from './supabaseConfig';
+
 /**
  * Service to interact with Feishu/Lark Documents.
  * Updated to support fetching public "Internet Visible" documents using a reader proxy.
@@ -6,53 +8,80 @@
 
 /**
  * Fetches the content of a public Feishu/Lark document.
- * Prerequisite: The document must be shared as "Anyone with the link can read" (Internet Visible).
+ * Priority: 1. Edge Function (Official API/Backend Proxy) -> 2. Jina Reader (Frontend Proxy)
  */
 export const fetchFeishuDocContent = async (url: string): Promise<string> => {
   if (!url) {
     throw new Error("链接不能为空");
   }
 
-  // We use r.jina.ai as a bridge to read public web pages and convert them to clean markdown
-  // This avoids CORS issues on the client side for public documents and provides clean text.
-  const proxyUrl = `https://r.jina.ai/${encodeURIComponent(url)}`;
+  let text = "";
+  let method = "";
 
+  // 1. Try Supabase Edge Function first
   try {
-    const response = await fetch(proxyUrl, {
-      method: 'GET',
-      headers: {
-        'X-Return-Format': 'markdown'
-      }
+    console.log("Attempting to fetch via Edge Function...");
+    const edgeUrl = `${SUPABASE_CONFIG.edgeFunctionUrl}/fetch-feishu-doc`;
+    const response = await fetch(edgeUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
     });
 
-    if (!response.ok) {
-      throw new Error(`无法访问文档 (Status: ${response.status})`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.content) {
+        text = data.content;
+        method = "Edge Function";
+        console.log("✅ Successfully fetched via Edge Function");
+      }
+    } else {
+      console.warn(`Edge Function failed (${response.status}), falling back...`);
     }
-
-    const text = await response.text();
-
-    // Basic validation to check if we hit a login wall
-    if (text.includes("Feishu") && (text.includes("Login") || text.includes("登录"))) {
-      throw new Error("读取失败：文档似乎需要登录。请确保在飞书文档右上角【分享】设置中，开启【互联网上获得链接的任何人可阅读】。");
-    }
-    
-    if (text.length < 50) {
-       throw new Error("读取到的文档内容过短，请检查链接是否正确或权限是否公开。");
-    }
-
-    // Auto-save URL on successful fetch
-    try {
-      localStorage.setItem('lastFeishuDocUrl', url);
-      console.log("✅ 已自动保存文档链接到 localStorage:", url);
-    } catch (err) {
-      console.warn("保存链接到 localStorage 失败:", err);
-    }
-
-    return text;
-  } catch (error: any) {
-    console.error("Fetch error:", error);
-    throw new Error(error.message || "获取文档失败，请检查网络连接或文档权限。");
+  } catch (err) {
+    console.warn("Edge Function error:", err);
   }
+
+  // 2. Fallback to Jina Reader (Frontend Proxy)
+  if (!text) {
+    console.log("Falling back to Jina Reader (Frontend)...");
+    const proxyUrl = `https://r.jina.ai/${encodeURIComponent(url)}`;
+    try {
+      const response = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: { 'X-Return-Format': 'markdown' }
+      });
+
+      if (!response.ok) {
+        throw new Error(`无法访问文档 (Status: ${response.status})`);
+      }
+
+      text = await response.text();
+      method = "Jina Reader";
+    } catch (error: any) {
+      console.error("Fetch error:", error);
+      throw new Error(error.message || "获取文档失败，请检查网络连接或文档权限。");
+    }
+  }
+
+  // Basic validation to check if we hit a login wall
+  if (text.includes("Feishu") && (text.includes("Login") || text.includes("登录"))) {
+    throw new Error("读取失败：文档似乎需要登录。请确保在飞书文档右上角【分享】设置中，开启【互联网上获得链接的任何人可阅读】。");
+  }
+  
+  if (text.length < 50) {
+      throw new Error("读取到的文档内容过短，请检查链接是否正确或权限是否公开。");
+  }
+
+  // Auto-save URL on successful fetch
+  try {
+    localStorage.setItem('lastFeishuDocUrl', url);
+    console.log(`✅ 已自动保存文档链接到 localStorage (${method}):`, url);
+  } catch (err) {
+    console.warn("保存链接到 localStorage 失败:", err);
+  }
+
+  return text;
 };
 
 /**
