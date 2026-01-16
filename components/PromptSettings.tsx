@@ -187,7 +187,18 @@ const PromptSettings: React.FC<Props> = ({
                     
                     {showFullContent && fullContent && (
                       <div className="mt-2 p-3 bg-gray-100 text-gray-700 text-xs rounded border border-gray-200 whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
-                        <div className="font-bold mb-2">完整抓取内容：</div>
+                        <div className="font-bold mb-2 flex justify-between items-center">
+                          <span>完整抓取内容：</span>
+                          <span className="text-gray-500 font-normal">共 {fullContent.length} 字符</span>
+                        </div>
+                        <div className="mb-2 p-2 bg-yellow-50 text-yellow-800 border border-yellow-200 rounded">
+                          <strong>⚠️ 内容不完整？</strong>
+                          <p className="mt-1">
+                            飞书文档较长时，自动读取可能因为动态加载而只获取前一部分。
+                            <br/>
+                            如果发现内容缺失，请切换到上方 <strong>“手动粘贴内容”</strong> 模式，直接从飞书文档复制粘贴全文即可。
+                          </p>
+                        </div>
                         {fullContent}
                       </div>
                     )}
