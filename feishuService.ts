@@ -71,17 +71,17 @@ export const extractSectionFromContent = (content: string, keyword: string): str
   let cleanContent = content;
   
   // Strategy 1: If there is a "Evaluation Criteria" or "评估标准" header, start from there
-  // This is specific to our use case but very effective
-  const criticalHeaders = ["Evaluation Criteria", "评估标准", "Context Awareness", "评分前置原则"];
-  for (const header of criticalHeaders) {
-    const idx = cleanContent.indexOf(header);
-    if (idx !== -1) {
-        console.log(`Auto-detected start anchor: "${header}"`);
-        // Keep the header itself
-        cleanContent = cleanContent.substring(idx);
-        break;
-    }
-  }
+   // This is specific to our use case but very effective
+   const criticalHeaders = ["Task", "请阅读上传的售前交流会议录音转写文档", "Evaluation Criteria", "评估标准", "Context Awareness", "评分前置原则"];
+   for (const header of criticalHeaders) {
+     const idx = cleanContent.indexOf(header);
+     if (idx !== -1) {
+         console.log(`Auto-detected start anchor: "${header}"`);
+         // Keep the header itself
+         cleanContent = cleanContent.substring(idx);
+         break;
+     }
+   }
 
   const lowerContent = cleanContent.toLowerCase();
   const lowerKeyword = keyword.toLowerCase();
