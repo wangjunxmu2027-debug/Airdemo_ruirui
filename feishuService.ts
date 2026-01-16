@@ -48,25 +48,58 @@ export const fetchFeishuDocContent = async (url: string): Promise<string> => {
 };
 
 /**
- * Extracts a specific section from the text content.
- * Simple heuristic: Find the keyword, take text until the end or next major section.
+ * Extracts a specific section from text content.
+ * Simple heuristic: Find keyword, take text until end or next major section.
  */
 export const extractSectionFromContent = (content: string, keyword: string): string => {
   if (!keyword) return content;
   
-  // Normalize content to avoid case sensitivity issues
+  // Debug: Log content preview
+  console.log("Doc content preview (first 500 chars):", content.substring(0, 500));
+  
   const lowerContent = content.toLowerCase();
   const lowerKeyword = keyword.toLowerCase();
   
-  const startIndex = lowerContent.indexOf(lowerKeyword);
+  // 1. Try exact match
+  let startIndex = lowerContent.indexOf(lowerKeyword);
   
+  // 2. If not found, try matching without markdown symbols (basic fuzzy match)
+  if (startIndex === -1) {
+    // Remove common markdown symbols from keyword for matching: **, ##, #, etc.
+    const cleanKeyword = lowerKeyword.replace(/[*#]/g, '').trim();
+    if (cleanKeyword !== lowerKeyword) {
+        startIndex = lowerContent.indexOf(cleanKeyword);
+    }
+  }
+
   if (startIndex === -1) {
     console.warn(`Keyword "${keyword}" not found in doc content. Returning full content.`);
+    console.log("Full content length:", content.length);
     return content;
   }
 
-  // Find the start of the line containing the keyword
+  // Find the start of the line containing the keyword to include header context
   const actualStart = startIndex;
   
   return content.substring(actualStart);
+};
+
+/**
+ * Validates if the content is valid for analysis.
+ * Returns error message if invalid, null if valid.
+ */
+export const validateDocContent = (content: string): string | null => {
+  if (!content || content.trim() === '') {
+    return "文档内容为空，请检查文档链接或权限。";
+  }
+
+  if (content.length < 100) {
+    return "文档内容过短，请检查是否读取到了完整内容。";
+  }
+
+  if (content.includes("Feishu") || content.includes("Login") || content.includes("登录")) {
+    return "文档似乎需要登录才能访问。请尝试直接粘贴文档内容。";
+  }
+
+  return null;
 };
