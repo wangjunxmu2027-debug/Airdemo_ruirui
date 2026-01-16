@@ -22,8 +22,20 @@ const PromptSettings: React.FC<Props> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewText, setPreviewText] = useState<string | null>(null);
+  const [debugLog, setDebugLog] = useState<string>('');
+
+  // Auto-fill URL from localStorage on mount
+  React.useEffect(() => {
+    const savedUrl = localStorage.getItem('lastFeishuDocUrl');
+    if (savedUrl && mode === 'feishu') {
+      setDocUrl(savedUrl);
+      console.log("✅ 已从 localStorage 自动填充上次使用的链接:", savedUrl);
+    }
+  }, [mode]);
 
   const handleFetch = async () => {
+    setDebugLog('');
+    
     if (mode === 'manual') {
       if (!manualContent.trim()) {
         setError("请输入文档内容");
@@ -33,6 +45,7 @@ const PromptSettings: React.FC<Props> = ({
       setError(null);
       try {
         setPreviewText(`已应用手动粘贴的内容：\n\n` + manualContent.slice(0, 200) + "...");
+        setDebugLog(`手动粘贴内容长度: ${manualContent.length} 字符`);
         onPromptChange(manualContent);
       } catch (err: any) {
         setError(err.message || "处理失败");
@@ -53,13 +66,16 @@ const PromptSettings: React.FC<Props> = ({
         
         if (!section || section === content) {
           setPreviewText(`警告：未找到关键词 "${sectionKeyword}"，将使用全文。\n\n` + content.slice(0, 200) + "...");
+          setDebugLog(`关键词 "${sectionKeyword}" 未找到，全文长度: ${content.length} 字符`);
           onPromptChange(content);
         } else {
           setPreviewText(`已提取 "${sectionKeyword}" 相关内容：\n\n` + section.slice(0, 200) + "...");
+          setDebugLog(`成功提取 "${sectionKeyword}"，提取内容长度: ${section.length} 字符`);
           onPromptChange(section);
         }
       } catch (err: any) {
         setError(err.message || "获取失败");
+        setDebugLog(`错误: ${err.message}`);
       } finally {
         setIsLoading(false);
       }
@@ -134,6 +150,13 @@ const PromptSettings: React.FC<Props> = ({
 
                 {error && <div className="text-red-500 text-xs p-2 bg-red-50 rounded">{error}</div>}
 
+                {debugLog && (
+                  <div className="mt-4 p-3 bg-gray-900 text-gray-300 text-xs rounded border border-gray-700 whitespace-pre-wrap font-mono max-h-24 overflow-y-auto">
+                    <div className="text-gray-400 mb-1">调试日志：</div>
+                    <div>{debugLog}</div>
+                  </div>
+                )}
+
                 <button
                   onClick={handleFetch}
                   disabled={isLoading}
@@ -157,7 +180,7 @@ const PromptSettings: React.FC<Props> = ({
                    <textarea
                       value={manualContent}
                       onChange={(e) => setManualContent(e.target.value)}
-                      placeholder="请粘贴飞书文档中的"Pitch复盘提示词"相关内容..."
+                      placeholder="请粘贴飞书文档中的&quot;Pitch复盘提示词&quot;相关内容..."
                       rows={12}
                       className="w-full p-2.5 text-sm border border-feishu-border rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-feishu-blue outline-none resize-none"
                    />

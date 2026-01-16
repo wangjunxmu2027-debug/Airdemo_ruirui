@@ -40,6 +40,14 @@ export const fetchFeishuDocContent = async (url: string): Promise<string> => {
        throw new Error("读取到的文档内容过短，请检查链接是否正确或权限是否公开。");
     }
 
+    // Auto-save URL on successful fetch
+    try {
+      localStorage.setItem('lastFeishuDocUrl', url);
+      console.log("✅ 已自动保存文档链接到 localStorage:", url);
+    } catch (err) {
+      console.warn("保存链接到 localStorage 失败:", err);
+    }
+
     return text;
   } catch (error: any) {
     console.error("Fetch error:", error);
@@ -54,8 +62,9 @@ export const fetchFeishuDocContent = async (url: string): Promise<string> => {
 export const extractSectionFromContent = (content: string, keyword: string): string => {
   if (!keyword) return content;
   
-  // Debug: Log content preview
-  console.log("Doc content preview (first 500 chars):", content.substring(0, 500));
+  // Debug: Log content preview (extended to 2000 chars for better debugging)
+  console.log("Doc content preview (first 2000 chars):", content.substring(0, 2000));
+  console.log("Full content length:", content.length);
   
   const lowerContent = content.toLowerCase();
   const lowerKeyword = keyword.toLowerCase();
@@ -74,7 +83,6 @@ export const extractSectionFromContent = (content: string, keyword: string): str
 
   if (startIndex === -1) {
     console.warn(`Keyword "${keyword}" not found in doc content. Returning full content.`);
-    console.log("Full content length:", content.length);
     return content;
   }
 
