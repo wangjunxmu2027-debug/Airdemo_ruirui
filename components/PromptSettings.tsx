@@ -22,7 +22,9 @@ const PromptSettings: React.FC<Props> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewText, setPreviewText] = useState<string | null>(null);
+  const [fullContent, setFullContent] = useState<string | null>(null);
   const [debugLog, setDebugLog] = useState<string>('');
+  const [showFullContent, setShowFullContent] = useState(false);
 
   // Auto-fill URL from localStorage on mount
   React.useEffect(() => {
@@ -62,6 +64,7 @@ const PromptSettings: React.FC<Props> = ({
       setError(null);
       try {
         const content = await fetchFeishuDocContent(docUrl);
+        setFullContent(content); // Save raw content for debugging
         const section = extractSectionFromContent(content, sectionKeyword);
         
         if (!section || section === content) {
@@ -166,8 +169,28 @@ const PromptSettings: React.FC<Props> = ({
                 </button>
 
                 {previewText && (
-                  <div className="mt-4 p-3 bg-green-50 text-green-800 text-xs rounded border border-green-100 whitespace-pre-wrap font-mono max-h-32 overflow-y-auto">
-                    {previewText}
+                  <div className="mt-4">
+                    <div className="p-3 bg-green-50 text-green-800 text-xs rounded border border-green-100 whitespace-pre-wrap font-mono max-h-32 overflow-y-auto">
+                      {previewText}
+                    </div>
+                    
+                    {fullContent && (
+                      <div className="mt-2 text-right">
+                        <button 
+                          onClick={() => setShowFullContent(!showFullContent)}
+                          className="text-xs text-feishu-blue hover:underline"
+                        >
+                          {showFullContent ? "收起完整抓取内容" : "查看完整抓取内容 (调试用)"}
+                        </button>
+                      </div>
+                    )}
+                    
+                    {showFullContent && fullContent && (
+                      <div className="mt-2 p-3 bg-gray-100 text-gray-700 text-xs rounded border border-gray-200 whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
+                        <div className="font-bold mb-2">完整抓取内容：</div>
+                        {fullContent}
+                      </div>
+                    )}
                   </div>
                 )}
              </div>

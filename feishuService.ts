@@ -66,7 +66,24 @@ export const extractSectionFromContent = (content: string, keyword: string): str
   console.log("Doc content preview (first 2000 chars):", content.substring(0, 2000));
   console.log("Full content length:", content.length);
   
-  const lowerContent = content.toLowerCase();
+  // Clean up content: Remove common header noise from Jina Reader output
+  // Jina Reader often includes navigation links at the start for Feishu docs
+  let cleanContent = content;
+  
+  // Strategy 1: If there is a "Evaluation Criteria" or "评估标准" header, start from there
+  // This is specific to our use case but very effective
+  const criticalHeaders = ["Evaluation Criteria", "评估标准", "Context Awareness", "评分前置原则"];
+  for (const header of criticalHeaders) {
+    const idx = cleanContent.indexOf(header);
+    if (idx !== -1) {
+        console.log(`Auto-detected start anchor: "${header}"`);
+        // Keep the header itself
+        cleanContent = cleanContent.substring(idx);
+        break;
+    }
+  }
+
+  const lowerContent = cleanContent.toLowerCase();
   const lowerKeyword = keyword.toLowerCase();
   
   // 1. Try exact match
@@ -83,13 +100,13 @@ export const extractSectionFromContent = (content: string, keyword: string): str
 
   if (startIndex === -1) {
     console.warn(`Keyword "${keyword}" not found in doc content. Returning full content.`);
-    return content;
+    return cleanContent;
   }
 
   // Find the start of the line containing the keyword to include header context
   const actualStart = startIndex;
   
-  return content.substring(actualStart);
+  return cleanContent.substring(actualStart);
 };
 
 /**
