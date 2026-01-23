@@ -10,8 +10,6 @@ import { analyzeTranscript } from './geminiService';
 import { EVALUATION_DIMENSIONS_UI } from './constants';
 import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
 import { createBitableRecord } from './bitableService';
-import { generateShareableLink } from './reportUtils';
-import { captureScreenshot, uploadScreenshot } from './screenshotUtils';
 
 function App() {
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
@@ -100,37 +98,18 @@ function App() {
     if (!result) return;
     setIsPushing(true);
     try {
-        // 1. Capture Screenshot
-        let screenshotBase64 = null;
-        try {
-            screenshotBase64 = await captureScreenshot('dashboard-capture-area');
-        } catch (screenshotError) {
-            console.warn("Screenshot capture failed, proceeding without screenshot:", screenshotError);
-        }
-        
-        // 2. Upload Screenshot
-        let screenshotUrl = '';
-        if (screenshotBase64) {
-            try {
-                screenshotUrl = await uploadScreenshot(screenshotBase64);
-            } catch (uploadError) {
-                console.warn("Screenshot upload failed:", uploadError);
-            }
-        }
-
-        // 3. Create Record
+        // 直接创建记录，链接由 Edge Function 生成并填充到截图字段
         const { recordId, reportLink } = await createBitableRecord(
           result,
           currentTitle,
           '售前顾问',
-          screenshotUrl
+          '' // 占位，后端会注入真实链接
         );
         setBitableRecordId(recordId);
         setShareLink(reportLink);
         console.log("✅ Auto-pushed to Feishu successfully");
     } catch (e: any) {
         console.error("Auto-push failed:", e);
-        // Do not alert on failure for auto-push, just log it
     } finally {
         setIsPushing(false);
     }
@@ -364,11 +343,7 @@ function App() {
                   </div>
                 </div>
                 
-                <AnalysisDashboard 
-                  result={result} 
-                  onPushToFeishu={handlePushToFeishu}
-                  isPushing={isPushing}
-                />
+                <AnalysisDashboard result={result} />
               </div>
             )}
           </>

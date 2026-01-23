@@ -114,7 +114,8 @@ serve(async (req) => {
       // 2. 更新 reportData 中的链接字段
       const webhookPayload = {
         ...reportData,
-        "报告链接": shortLink
+        "报告链接": shortLink,
+        "AI复盘截屏": shortLink // 将报告链接填入截图字段
       };
 
       // 3. 发送 Webhook

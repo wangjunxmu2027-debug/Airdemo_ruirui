@@ -1,24 +1,5 @@
-import html2canvas from 'html2canvas';
+import * as htmlToImage from 'html-to-image';
 import { SUPABASE_CONFIG } from './supabaseConfig';
-
-const CLEANUP_STYLES = `
-  * {
-    color: #000000 !important;
-    background-color: #ffffff !important;
-    border-color: #e5e7eb !important;
-  }
-  .text-feishu-blue { color: #3370FF !important; }
-  .text-feishu-text { color: #1F2329 !important; }
-  .text-feishu-subtext { color: #646A73 !important; }
-  .text-red-500 { color: #ef4444 !important; }
-  .text-amber-500 { color: #f59e0b !important; }
-  .text-emerald-500 { color: #10b981 !important; }
-  .bg-white { background-color: #ffffff !important; }
-  .bg-gray-50 { background-color: #f9fafb !important; }
-  .bg-blue-50 { background-color: #eff6ff !important; }
-  .bg-feishu-blue { background-color: #3370FF !important; }
-  .border-feishu-border { border-color: #DEE0E3 !important; }
-`;
 
 export const captureScreenshot = async (elementId: string): Promise<string | null> => {
   const element = document.getElementById(elementId);
@@ -31,26 +12,28 @@ export const captureScreenshot = async (elementId: string): Promise<string | nul
     // Wait for rendering
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const canvas = await html2canvas(element, {
-      useCORS: true,
-      scale: 1, // Lower scale to reduce complexity
-      logging: false,
+    // Use html-to-image which has better modern CSS support
+    // Cast to any to bypass strict TS check for specific library options
+    const dataUrl = await htmlToImage.toPng(element, {
+      quality: 0.95,
       backgroundColor: '#ffffff',
+      fontEmbedCss: false, // Disable web font embedding
+      style: {
+        transform: 'none',
+      },
       onclone: (clonedDoc) => {
+        // Aggressively override fonts to system fonts to avoid fetching Google Fonts
         const style = clonedDoc.createElement('style');
-        style.textContent = CLEANUP_STYLES;
+        style.textContent = `
+          body, div, span, p, h1, h2, h3, h4, h5, h6 {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+            font-weight: normal !important;
+          }
+        `;
         clonedDoc.head.appendChild(style);
-        
-        // Force layout recalculation
-        const chartContainer = clonedDoc.querySelector('.recharts-wrapper');
-        if (chartContainer) {
-            (chartContainer as HTMLElement).style.width = '100%';
-            (chartContainer as HTMLElement).style.height = '320px';
-        }
       }
-    });
+    } as any);
     
-    const dataUrl = canvas.toDataURL('image/png');
     return dataUrl.split(',')[1];
   } catch (error) {
     console.error('Screenshot failed:', error);
