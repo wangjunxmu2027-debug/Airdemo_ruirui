@@ -1,6 +1,25 @@
 import html2canvas from 'html2canvas';
 import { SUPABASE_CONFIG } from './supabaseConfig';
 
+const CLEANUP_STYLES = `
+  * {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    border-color: #e5e7eb !important;
+  }
+  .text-feishu-blue { color: #3370FF !important; }
+  .text-feishu-text { color: #1F2329 !important; }
+  .text-feishu-subtext { color: #646A73 !important; }
+  .text-red-500 { color: #ef4444 !important; }
+  .text-amber-500 { color: #f59e0b !important; }
+  .text-emerald-500 { color: #10b981 !important; }
+  .bg-white { background-color: #ffffff !important; }
+  .bg-gray-50 { background-color: #f9fafb !important; }
+  .bg-blue-50 { background-color: #eff6ff !important; }
+  .bg-feishu-blue { background-color: #3370FF !important; }
+  .border-feishu-border { border-color: #DEE0E3 !important; }
+`;
+
 export const captureScreenshot = async (elementId: string): Promise<string | null> => {
   const element = document.getElementById(elementId);
   if (!element) {
@@ -9,35 +28,32 @@ export const captureScreenshot = async (elementId: string): Promise<string | nul
   }
 
   try {
-    // Wait for a moment to ensure rendering is complete if needed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for rendering
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // html2canvas configuration to bypass unsupported CSS features like oklch
     const canvas = await html2canvas(element, {
       useCORS: true,
-      scale: 2, // Better quality
+      scale: 1, // Lower scale to reduce complexity
       logging: false,
-      backgroundColor: '#ffffff', // Ensure white background
+      backgroundColor: '#ffffff',
       onclone: (clonedDoc) => {
-         // Helper to convert modern colors to RGB if possible, or just fallback
-         // Note: html2canvas runs in the browser context, but clonedDoc is a detached DOM
-         // We can try to force sRGB color profile or modify styles if needed
-         // For now, let's try to remove potentially problematic CSS variables if they are the root cause
-         // or just rely on the fact that we are not using oklch explicitly in our custom CSS
-      },
-      ignoreElements: (element) => {
-          // Ignore any elements that might cause issues if they are not visible/essential
-          return false;
+        const style = clonedDoc.createElement('style');
+        style.textContent = CLEANUP_STYLES;
+        clonedDoc.head.appendChild(style);
+        
+        // Force layout recalculation
+        const chartContainer = clonedDoc.querySelector('.recharts-wrapper');
+        if (chartContainer) {
+            (chartContainer as HTMLElement).style.width = '100%';
+            (chartContainer as HTMLElement).style.height = '320px';
+        }
       }
     });
     
-    // Convert to base64 (remove prefix)
     const dataUrl = canvas.toDataURL('image/png');
-    const base64 = dataUrl.split(',')[1];
-    return base64;
+    return dataUrl.split(',')[1];
   } catch (error) {
     console.error('Screenshot failed:', error);
-    // Return null so the caller knows screenshot failed but can proceed
     return null;
   }
 };
