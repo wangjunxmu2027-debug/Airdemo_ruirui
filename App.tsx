@@ -11,7 +11,7 @@ import { EVALUATION_DIMENSIONS_UI } from './constants';
 import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
 import { createBitableRecord } from './bitableService';
 import { generateShareableLink } from './reportUtils';
-import { uploadScreenshot } from './screenshotUtils';
+import { captureScreenshot, uploadScreenshot } from './screenshotUtils';
 
 function App() {
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
@@ -33,6 +33,7 @@ function App() {
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [isSavingToBitable, setIsSavingToBitable] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
+  const [hasAutoPushed, setHasAutoPushed] = useState(false);
 
   // Simulation logic for progress steps
   useEffect(() => {
@@ -53,6 +54,18 @@ function App() {
     return () => clearInterval(interval);
   }, [status]);
 
+  // Auto Push to Feishu when Analysis is Complete
+  useEffect(() => {
+    if (status === AnalysisStatus.COMPLETE && result && !hasAutoPushed) {
+      // Delay to ensure dashboard is rendered and charts are animated
+      const timer = setTimeout(() => {
+        handlePushToFeishu();
+        setHasAutoPushed(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [status, result, hasAutoPushed]);
+
   // Load history on mount
   useEffect(() => {
     setHistoryItems(getHistory());
@@ -62,6 +75,7 @@ function App() {
     setStatus(AnalysisStatus.ANALYZING);
     setErrorMsg(null);
     setCurrentTitle(input.title || '未命名分析');
+    setHasAutoPushed(false); // Reset auto-push state
     
     try {
       const data = await analyzeTranscript(input, {
@@ -82,15 +96,20 @@ function App() {
     }
   };
 
-  const handlePushToFeishu = async (screenshotBase64: string) => {
+  const handlePushToFeishu = async () => {
     if (!result) return;
     setIsPushing(true);
     try {
+        // 1. Capture Screenshot
+        const screenshotBase64 = await captureScreenshot('dashboard-capture-area');
+        
+        // 2. Upload Screenshot
         let screenshotUrl = '';
         if (screenshotBase64) {
             screenshotUrl = await uploadScreenshot(screenshotBase64);
         }
 
+        // 3. Create Record
         const { recordId, reportLink } = await createBitableRecord(
           result,
           currentTitle,
@@ -99,10 +118,10 @@ function App() {
         );
         setBitableRecordId(recordId);
         setShareLink(reportLink);
-        alert("✅ 已成功推送到飞书多维表格！");
+        console.log("✅ Auto-pushed to Feishu successfully");
     } catch (e: any) {
         console.error(e);
-        alert("推送失败: " + e.message);
+        // Do not alert on failure for auto-push, just log it
     } finally {
         setIsPushing(false);
     }

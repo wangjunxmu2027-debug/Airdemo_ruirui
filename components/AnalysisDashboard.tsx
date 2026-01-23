@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { AnalysisResult } from '../types';
 import CustomRadarChart from './RadarChart';
 import { generateMarkdown } from '../utils';
-import { captureScreenshot } from '../screenshotUtils';
 
 interface Props {
   result: AnalysisResult;
-  onPushToFeishu?: (screenshotBase64: string) => void;
+  onPushToFeishu?: () => void;
   isPushing?: boolean;
 }
 
@@ -69,15 +68,7 @@ const AnalysisDashboard: React.FC<Props> = ({ result, onPushToFeishu, isPushing 
 
   const handlePush = async () => {
     if (!onPushToFeishu) return;
-    try {
-        const base64 = await captureScreenshot('dashboard-capture-area');
-        if (base64) {
-            onPushToFeishu(base64);
-        }
-    } catch (e) {
-        console.error(e);
-        alert("截图失败，请重试");
-    }
+    onPushToFeishu();
   };
 
   const handleExport = () => {
