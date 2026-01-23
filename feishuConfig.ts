@@ -1,25 +1,15 @@
 export const FEISHU_CONFIG = {
-  appId: 'cli_a9c0f8b111f91bc7',
-  appSecret: 'XaMgD0puOz7jwWgtT7krkejeWQKHEBts',
-  appToken: 'FQaXbQuFya8kp0sUk3EcsG2Sn5f',
-  tableId: 'tblr3ehSpZdxnoNZ'
+  webhookUrl: 'https://bytedance.larkoffice.com/base/automation/webhook/event/X1xHaGJtlwrbaYh6VX2cWWFingh'
 };
 
 export const FEISHU_API_BASE = 'https://open.feishu.cn/open-apis';
 
 export const BITABLE_FIELDS = {
-  TITLE: 'title',
-  CREATED_TIME: 'created_time',
-  ANALYST: 'analyst',
-  TOTAL_SCORE: 'total_score',
-  SCORE_LEVEL: 'score_level',
-  VALUE_DELIVERY: 'value_delivery',
-  INDUSTRY_FIT: 'industry_fit',
-  CUSTOMER_INTERACTION: 'customer_interaction',
-  OBJECTION_HANDLING: 'objection_handling',
-  PROFESSIONALISM: 'professionalism',
-  EXECUTIVE_SUMMARY: 'executive_summary',
-  GROWTH_SUGGESTION: 'growth_suggestion',
-  DIFFICULT_QUESTIONS_COUNT: 'difficult_questions_count',
-  REPORT_LINK: 'report_link'
+  CUSTOMER_NAME: '客户名称',
+  REPORTER: '汇报人',
+  REPORT_DATE: '汇报日期',
+  SUMMARY: '给谁汇报了什么',
+  SCREENSHOT: 'AI复盘截屏',
+  SCORE: '汇报评分',
+  REPORT_LINK: '报告链接'
 };

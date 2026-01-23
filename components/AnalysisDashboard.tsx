@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { AnalysisResult } from '../types';
 import CustomRadarChart from './RadarChart';
 import { generateMarkdown } from '../utils';
+import { captureScreenshot } from '../screenshotUtils';
 
 interface Props {
   result: AnalysisResult;
+  onPushToFeishu?: (screenshotBase64: string) => void;
+  isPushing?: boolean;
 }
 
 const ScoreCard: React.FC<{ title: string; score: number; max: number; color?: string }> = ({ title, score, max }) => {
@@ -61,8 +64,21 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
   );
 };
 
-const AnalysisDashboard: React.FC<Props> = ({ result }) => {
+const AnalysisDashboard: React.FC<Props> = ({ result, onPushToFeishu, isPushing }) => {
   const [copied, setCopied] = useState(false);
+
+  const handlePush = async () => {
+    if (!onPushToFeishu) return;
+    try {
+        const base64 = await captureScreenshot('dashboard-capture-area');
+        if (base64) {
+            onPushToFeishu(base64);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("截图失败，请重试");
+    }
+  };
 
   const handleExport = () => {
     const markdown = generateMarkdown(result);
@@ -73,7 +89,7 @@ const AnalysisDashboard: React.FC<Props> = ({ result }) => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in relative">
+    <div id="dashboard-capture-area" className="space-y-6 animate-fade-in relative">
       
       {/* Header Summary */}
       <div className="bg-white rounded-xl p-8 border border-feishu-border feishu-shadow">
@@ -86,6 +102,32 @@ const AnalysisDashboard: React.FC<Props> = ({ result }) => {
                     <h2 className="text-xl font-bold text-feishu-text">执行摘要</h2>
                  </div>
                  
+                 {/* Push Button */}
+                 {onPushToFeishu && (
+                   <button
+                        onClick={handlePush}
+                        disabled={isPushing}
+                        className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-sm bg-feishu-blue text-white hover:bg-feishu-hover border border-transparent disabled:opacity-50 mr-2`}
+                    >
+                        {isPushing ? (
+                            <>
+                            <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            推送中...
+                            </>
+                        ) : (
+                            <>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            推送至飞书
+                            </>
+                        )}
+                    </button>
+                 )}
+
                  {/* Export Button */}
                  <button
                     onClick={handleExport}

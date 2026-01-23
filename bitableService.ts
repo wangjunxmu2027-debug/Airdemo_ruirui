@@ -1,45 +1,27 @@
-import { SUPABASE_CONFIG, FEISHU_CONFIG, BITABLE_FIELDS } from './supabaseConfig';
+import { SUPABASE_CONFIG } from './supabaseConfig';
+import { FEISHU_CONFIG, BITABLE_FIELDS } from './feishuConfig';
 import { AnalysisResult } from './types';
-import { generateShareableLink } from './reportUtils';
-
-const getScoreLevel = (score: number): string => {
-  if (score >= 80) return '优秀';
-  if (score >= 60) return '良好';
-  return '需改进';
-};
 
 export const createBitableRecord = async (
   analysisResult: AnalysisResult,
   title: string,
-  analyst: string = '未知'
+  analyst: string = '未知',
+  screenshotUrl: string = ''
 ): Promise<{ recordId: string; reportLink: string }> => {
   if (!FEISHU_CONFIG.webhookUrl) {
     throw new Error('未配置飞书 Webhook URL');
   }
 
   try {
-    const dimensionMap: Record<string, number> = {};
-    analysisResult.dimensions.forEach(dim => {
-      const key = dim.name.split(' ')[0];
-      dimensionMap[key] = dim.score;
-    });
-
-    // 构造基础数据
+    // 构造极简数据 - 仅包含用户指定的字段
     const reportData = {
-      [BITABLE_FIELDS.TITLE]: title,
-      [BITABLE_FIELDS.CREATED_TIME]: new Date().toISOString(),
-      [BITABLE_FIELDS.ANALYST]: analyst,
-      [BITABLE_FIELDS.TOTAL_SCORE]: analysisResult.totalScore,
-      [BITABLE_FIELDS.SCORE_LEVEL]: getScoreLevel(analysisResult.totalScore),
-      [BITABLE_FIELDS.VALUE_DELIVERY]: dimensionMap['价值传递清晰度'] || 0,
-      [BITABLE_FIELDS.INDUSTRY_FIT]: dimensionMap['行业与场景贴合度'] || 0,
-      [BITABLE_FIELDS.CUSTOMER_INTERACTION]: dimensionMap['客户反馈与互动'] || 0,
-      [BITABLE_FIELDS.OBJECTION_HANDLING]: dimensionMap['异议处理与推进'] || 0,
-      [BITABLE_FIELDS.PROFESSIONALISM]: dimensionMap['语言表达与专业度'] || 0,
-      [BITABLE_FIELDS.EXECUTIVE_SUMMARY]: analysisResult.executiveSummary,
-      [BITABLE_FIELDS.GROWTH_SUGGESTION]: analysisResult.generalSuggestions,
-      [BITABLE_FIELDS.DIFFICULT_QUESTIONS_COUNT]: analysisResult.difficultQuestions?.length || 0,
-      // 这里的 REPORT_LINK 会由 Edge Function 生成并覆盖
+      [BITABLE_FIELDS.CUSTOMER_NAME]: title,
+      [BITABLE_FIELDS.REPORTER]: analyst,
+      [BITABLE_FIELDS.REPORT_DATE]: new Date().toLocaleDateString('zh-CN'),
+      [BITABLE_FIELDS.SUMMARY]: analysisResult.executiveSummary,
+      [BITABLE_FIELDS.SCREENSHOT]: screenshotUrl,
+      [BITABLE_FIELDS.SCORE]: analysisResult.totalScore,
+      // 报告链接字段在 Edge Function 中生成并填充
     };
 
     // 获取当前应用的基础 URL
@@ -55,7 +37,7 @@ export const createBitableRecord = async (
         body: JSON.stringify({
           webhookUrl: FEISHU_CONFIG.webhookUrl,
           reportData: reportData,
-          originalData: analysisResult, // 新增：发送原始数据用于存库
+          originalData: analysisResult, // 仍发送原始数据用于存库生成报告链接
           appUrl: appUrl
         }),
       }
@@ -73,6 +55,7 @@ export const createBitableRecord = async (
     throw error;
   }
 };
+
 
 export const getBitableRecord = async (recordId: string): Promise<any | null> => {
   try {

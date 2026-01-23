@@ -11,6 +11,7 @@ import { EVALUATION_DIMENSIONS_UI } from './constants';
 import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
 import { createBitableRecord } from './bitableService';
 import { generateShareableLink } from './reportUtils';
+import { uploadScreenshot } from './screenshotUtils';
 
 function App() {
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
@@ -25,11 +26,13 @@ function App() {
   // Config State
   const [showSettings, setShowSettings] = useState(false);
   const [customPrompt, setCustomPrompt] = useState<string | null>(null);
+  const [currentTitle, setCurrentTitle] = useState<string>('');
 
   // Bitable State
   const [bitableRecordId, setBitableRecordId] = useState<string | null>(null);
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [isSavingToBitable, setIsSavingToBitable] = useState(false);
+  const [isPushing, setIsPushing] = useState(false);
 
   // Simulation logic for progress steps
   useEffect(() => {
@@ -58,6 +61,8 @@ function App() {
   const handleAnalyze = async (input: AnalysisInput) => {
     setStatus(AnalysisStatus.ANALYZING);
     setErrorMsg(null);
+    setCurrentTitle(input.title || '未命名分析');
+    
     try {
       const data = await analyzeTranscript(input, {
         systemInstruction: customPrompt || undefined
@@ -69,25 +74,37 @@ function App() {
       const updatedHistory = saveHistoryItem(data, input.title || '未命名分析');
       setHistoryItems(updatedHistory);
 
-      // Save to Bitable
-      setIsSavingToBitable(true);
-      try {
-        const { recordId, reportLink } = await createBitableRecord(
-          data,
-          input.title || '未命名分析',
-          '售前顾问'
-        );
-        setBitableRecordId(recordId);
-        setShareLink(reportLink);
-      } catch (bitableError) {
-        console.error('保存到多维表格失败:', bitableError);
-      } finally {
-        setIsSavingToBitable(false);
-      }
+      // Auto-save removed to allow screenshot
     } catch (err: any) {
       console.error(err);
       setStatus(AnalysisStatus.ERROR);
       setErrorMsg(err.message || "分析失败，请检查API Key或文件格式后重试。");
+    }
+  };
+
+  const handlePushToFeishu = async (screenshotBase64: string) => {
+    if (!result) return;
+    setIsPushing(true);
+    try {
+        let screenshotUrl = '';
+        if (screenshotBase64) {
+            screenshotUrl = await uploadScreenshot(screenshotBase64);
+        }
+
+        const { recordId, reportLink } = await createBitableRecord(
+          result,
+          currentTitle,
+          '售前顾问',
+          screenshotUrl
+        );
+        setBitableRecordId(recordId);
+        setShareLink(reportLink);
+        alert("✅ 已成功推送到飞书多维表格！");
+    } catch (e: any) {
+        console.error(e);
+        alert("推送失败: " + e.message);
+    } finally {
+        setIsPushing(false);
     }
   };
 
@@ -319,7 +336,11 @@ function App() {
                   </div>
                 </div>
                 
-                <AnalysisDashboard result={result} />
+                <AnalysisDashboard 
+                  result={result} 
+                  onPushToFeishu={handlePushToFeishu}
+                  isPushing={isPushing}
+                />
               </div>
             )}
           </>

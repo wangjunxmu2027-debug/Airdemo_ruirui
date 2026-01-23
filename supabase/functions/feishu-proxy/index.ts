@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { decode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,52 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // 新的路由：上传截图
+    if (path === "/feishu-proxy/upload-screenshot" && req.method === "POST") {
+      try {
+        const body = await req.json();
+        const { image, filename } = body; 
+
+        if (!image) {
+             return new Response(JSON.stringify({ error: "No image data" }), { status: 400, headers: corsHeaders });
+        }
+
+        const binary = decode(image);
+        
+        // Use Service Role Key for upload to ensure permission
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+        const adminSupabase = createClient(supabaseUrl, serviceKey);
+
+        const safeFilename = filename || `screenshot_${Date.now()}.png`;
+
+        // Upload to 'screenshots' bucket
+        const { data, error } = await adminSupabase
+            .storage
+            .from('screenshots')
+            .upload(safeFilename, binary, {
+                contentType: 'image/png',
+                upsert: true
+            });
+
+        if (error) {
+            console.error("Storage upload error:", error);
+            return new Response(JSON.stringify({ error: "Upload failed: " + error.message }), { status: 500, headers: corsHeaders });
+        }
+
+        const { data: { publicUrl } } = adminSupabase
+            .storage
+            .from('screenshots')
+            .getPublicUrl(safeFilename);
+
+        return new Response(JSON.stringify({ url: publicUrl }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e) {
+         console.error("Upload handler error:", e);
+         return new Response(JSON.stringify({ error: "Processing failed: " + e.message }), { status: 500, headers: corsHeaders });
+      }
+    }
 
     // 新的路由：保存报告并触发 Webhook
     if (path === "/feishu-proxy/save-and-webhook" && req.method === "POST") {
