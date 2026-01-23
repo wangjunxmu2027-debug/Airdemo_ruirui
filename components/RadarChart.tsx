@@ -53,13 +53,13 @@ const CustomRadarChart: React.FC<Props> = ({ data }) => {
   }));
 
   return (
-    <div className="w-full h-80">
-      <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={300}>
-        <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>
+    <div className="w-full h-80 min-h-[320px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
           <PolarGrid stroke="#e2e8f0" strokeDasharray="4 4" />
           <PolarAngleAxis 
             dataKey="fullName" 
-            tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }}
+            tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }}
           />
           {/* Domain set to 0-100 to represent percentage */}
           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
