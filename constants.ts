@@ -74,8 +74,14 @@ Your task is to analyze the uploaded pre-sales meeting transcript and provide a 
 
 **Information Extraction (信息提取 - 重要):**
 Please extract the following information from the transcript context with high precision:
-1.  **Customer Name (客户名称):** Identify the specific company or client name being visited or pitched to. If not explicitly mentioned, infer from context (e.g., "Maiketian", "Haitian", "Jiannanchun").
+1.  **Customer Name (客户名称):** Identify the specific company or client name being visited or pitched to. 
+    *   **STRICT FORMAT:** Extract ONLY the company name. DO NOT include brackets, explanations, or aliases.
+    *   **Correct:** "顺丰集团", "麦科田", "海天味业"
+    *   **Incorrect:** "顺丰 (Shunfeng)", "麦科田 (Medical)", "海天 (客户)"
 2.  **Reporter Name (汇报人):** Identify the name of the main pre-sales consultant or speaker representing our side.
+    *   **STRICT FORMAT:** Extract ONLY the name. DO NOT include job titles, roles, or departments.
+    *   **Correct:** "叶鑫", "张三"
+    *   **Incorrect:** "叶鑫 (飞书CEO)", "售前顾问张三"
 3.  **Report Summary/Target Audience (给谁汇报了什么):** Summarize the core topic and the specific audience hierarchy.
     *   **Format:** "[Audience Roles] : [Topic/Content]"
     *   **Examples of Audience Roles:** "Chairman & Management Team", "Sales Company CIO & Team", "Supply Chain Head", "General Manager", "Retail Operations Head", "CEO/CFO/CHO", "R&D/Big Data/AI Team".
