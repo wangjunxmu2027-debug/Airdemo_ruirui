@@ -16,6 +16,9 @@ export interface DifficultQuestion {
 }
 
 export interface AnalysisResult {
+  customerName?: string; // Extracted customer name
+  reporterName?: string; // Extracted reporter name
+  reportSummary?: string; // "给谁汇报了什么"
   totalScore: number;
   summary: string;
   dimensions: DimensionScore[];

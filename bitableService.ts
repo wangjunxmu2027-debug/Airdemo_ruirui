@@ -13,12 +13,22 @@ export const createBitableRecord = async (
   }
 
   try {
+    // 优先使用 AI 提取的字段，如果未提取到则回退到默认值
+    // Customer Name: AI提取 > 文件名
+    const customerName = analysisResult.customerName || title;
+    
+    // Reporter: AI提取 > 默认"售前顾问"
+    const reporter = analysisResult.reporterName || analyst || '售前顾问';
+    
+    // Summary: AI提取 > 执行摘要前50字
+    const summary = analysisResult.reportSummary || (analysisResult.executiveSummary ? analysisResult.executiveSummary.slice(0, 100) + '...' : '无摘要');
+
     // 构造极简数据 - 仅包含用户指定的字段
     const reportData = {
-      [BITABLE_FIELDS.CUSTOMER_NAME]: title,
-      [BITABLE_FIELDS.REPORTER]: analyst,
+      [BITABLE_FIELDS.CUSTOMER_NAME]: customerName,
+      [BITABLE_FIELDS.REPORTER]: reporter,
       [BITABLE_FIELDS.REPORT_DATE]: new Date().toLocaleDateString('zh-CN'),
-      [BITABLE_FIELDS.SUMMARY]: analysisResult.executiveSummary,
+      [BITABLE_FIELDS.SUMMARY]: summary,
       [BITABLE_FIELDS.SCREENSHOT]: screenshotUrl,
       [BITABLE_FIELDS.SCORE]: analysisResult.totalScore,
       // 报告链接字段在 Edge Function 中生成并填充

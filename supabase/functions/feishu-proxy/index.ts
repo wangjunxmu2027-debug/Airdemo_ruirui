@@ -104,6 +104,8 @@ serve(async (req) => {
       const reportId = savedReport.id;
       // 生成短链接 (假设前端路由是 /r/:id)
       // 如果没有提供 appUrl，默认用 localhost (仅供测试)
+      // 注意：Vercel 部署环境通常会自动设置 VITE_APP_URL，但 Edge Function 是独立环境
+      // 如果 body 中没有 appUrl，则尝试使用 Supabase 的默认域名或 localhost
       const baseUrl = appUrl || "http://localhost:8080"; 
       // 移除末尾斜杠
       const cleanBaseUrl = baseUrl.replace(/\/$/, "");

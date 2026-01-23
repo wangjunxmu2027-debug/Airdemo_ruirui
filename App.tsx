@@ -10,8 +10,15 @@ import { analyzeTranscript } from './geminiService';
 import { EVALUATION_DIMENSIONS_UI } from './constants';
 import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
 import { createBitableRecord } from './bitableService';
+import ReportView from './components/ReportView';
 
 function App() {
+  // Simple routing for report view
+  const isReportView = window.location.pathname.startsWith('/r/') || window.location.pathname.startsWith('/report');
+  if (isReportView) {
+    return <ReportView />;
+  }
+
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

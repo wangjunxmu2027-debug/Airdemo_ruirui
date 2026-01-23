@@ -72,9 +72,25 @@ Your task is to analyze the uploaded pre-sales meeting transcript and provide a 
     *   **[-5] Malicious Attacks:** Maliciously attacking competitors (DingTalk/WeCom) instead of objective conceptual comparison.
     *   **[-2] Confused Expression:** Logic gaps, or prolonged silence when questioned.
 
+**Information Extraction (信息提取 - 重要):**
+Please extract the following information from the transcript context with high precision:
+1.  **Customer Name (客户名称):** Identify the specific company or client name being visited or pitched to. If not explicitly mentioned, infer from context (e.g., "Maiketian", "Haitian", "Jiannanchun").
+2.  **Reporter Name (汇报人):** Identify the name of the main pre-sales consultant or speaker representing our side.
+3.  **Report Summary/Target Audience (给谁汇报了什么):** Summarize the core topic and the specific audience hierarchy.
+    *   **Format:** "[Audience Roles] : [Topic/Content]"
+    *   **Examples of Audience Roles:** "Chairman & Management Team", "Sales Company CIO & Team", "Supply Chain Head", "General Manager", "Retail Operations Head", "CEO/CFO/CHO", "R&D/Big Data/AI Team".
+    *   **Examples of Full Summary:**
+        *   "麦科田董事长及管理层"
+        *   "海天董事长及管理团队"
+        *   "剑南春销售公司CIO及其团队"
+        *   "CEO：飞书CXO行业FP介绍"
+        *   "杨协成中国区CEO、香港&中国区销售负责人及团队"
+        *   "研发团队、大数据、AI团队"
+
 **Output Requirement:**
-1. **Scoring Table:** Evaluate all 5 dimensions. Provide Score, Positive Observations (Highlights), and Negative Observations (Deductions).
-2. **High Difficulty Defense Replay (Part 2):** Extract 1-3 of the most difficult questions/challenges from the meeting. Create a structured list with:
+1. **Metadata:** Extract Customer Name, Reporter Name, and Report Summary based on the rules above.
+2. **Scoring Table:** Evaluate all 5 dimensions. Provide Score, Positive Observations (Highlights), and Negative Observations (Deductions).
+3. **High Difficulty Defense Replay (Part 2):** Extract 1-3 of the most difficult questions/challenges from the meeting. Create a structured list with:
    - Client Challenge/Question
    - Actual On-site Answer
    - Expert Suggested Answer
