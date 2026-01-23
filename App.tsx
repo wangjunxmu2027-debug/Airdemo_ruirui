@@ -101,12 +101,21 @@ function App() {
     setIsPushing(true);
     try {
         // 1. Capture Screenshot
-        const screenshotBase64 = await captureScreenshot('dashboard-capture-area');
+        let screenshotBase64 = null;
+        try {
+            screenshotBase64 = await captureScreenshot('dashboard-capture-area');
+        } catch (screenshotError) {
+            console.warn("Screenshot capture failed, proceeding without screenshot:", screenshotError);
+        }
         
         // 2. Upload Screenshot
         let screenshotUrl = '';
         if (screenshotBase64) {
-            screenshotUrl = await uploadScreenshot(screenshotBase64);
+            try {
+                screenshotUrl = await uploadScreenshot(screenshotBase64);
+            } catch (uploadError) {
+                console.warn("Screenshot upload failed:", uploadError);
+            }
         }
 
         // 3. Create Record
@@ -120,7 +129,7 @@ function App() {
         setShareLink(reportLink);
         console.log("✅ Auto-pushed to Feishu successfully");
     } catch (e: any) {
-        console.error(e);
+        console.error("Auto-push failed:", e);
         // Do not alert on failure for auto-push, just log it
     } finally {
         setIsPushing(false);

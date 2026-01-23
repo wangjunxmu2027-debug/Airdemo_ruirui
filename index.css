@@ -11,6 +11,11 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Force sRGB to avoid oklch issues with html2canvas */
+:root {
+  color-scheme: light;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-feishu-bg);

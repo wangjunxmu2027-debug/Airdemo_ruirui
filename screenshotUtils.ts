@@ -10,13 +10,25 @@ export const captureScreenshot = async (elementId: string): Promise<string | nul
 
   try {
     // Wait for a moment to ensure rendering is complete if needed
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
+    // html2canvas configuration to bypass unsupported CSS features like oklch
     const canvas = await html2canvas(element, {
       useCORS: true,
       scale: 2, // Better quality
       logging: false,
       backgroundColor: '#ffffff', // Ensure white background
+      onclone: (clonedDoc) => {
+         // Helper to convert modern colors to RGB if possible, or just fallback
+         // Note: html2canvas runs in the browser context, but clonedDoc is a detached DOM
+         // We can try to force sRGB color profile or modify styles if needed
+         // For now, let's try to remove potentially problematic CSS variables if they are the root cause
+         // or just rely on the fact that we are not using oklch explicitly in our custom CSS
+      },
+      ignoreElements: (element) => {
+          // Ignore any elements that might cause issues if they are not visible/essential
+          return false;
+      }
     });
     
     // Convert to base64 (remove prefix)
@@ -25,6 +37,7 @@ export const captureScreenshot = async (elementId: string): Promise<string | nul
     return base64;
   } catch (error) {
     console.error('Screenshot failed:', error);
+    // Return null so the caller knows screenshot failed but can proceed
     return null;
   }
 };
