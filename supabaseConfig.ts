@@ -1,7 +1,7 @@
 export const SUPABASE_CONFIG = {
-  url: 'https://mcp.supabase.com',
+  url: 'https://xqsviesaffzksjuqbxey.supabase.co',
   projectRef: 'xqsviesaffzksjuqbxey',
-  anonKey: '',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc3ZpZXNhZmZ6a3NqdXFieGV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY0NTU0MzUsImV4cCI6MjA4MjAzMTQzNX0.tFLHpu1vnWknOntBot9ggObbZbzJLqSuHo2KYHiWwss',
   edgeFunctionUrl: 'https://xqsviesaffzksjuqbxey.supabase.co/functions/v1'
 };
 
