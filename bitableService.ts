@@ -1,6 +1,9 @@
 import { SUPABASE_CONFIG } from './supabaseConfig';
 import { FEISHU_CONFIG, BITABLE_FIELDS } from './feishuConfig';
 import { AnalysisResult } from './types';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
 export const createBitableRecord = async (
   analysisResult: AnalysisResult,
@@ -37,31 +40,20 @@ export const createBitableRecord = async (
     // 获取当前应用的基础 URL
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 
-    const response = await fetch(
-      `${SUPABASE_CONFIG.edgeFunctionUrl}/feishu-proxy/save-and-webhook`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
-          'apikey': SUPABASE_CONFIG.anonKey
-        },
-        body: JSON.stringify({
-          webhookUrl: FEISHU_CONFIG.webhookUrl,
-          reportData: reportData,
-          originalData: analysisResult, // 仍发送原始数据用于存库生成报告链接
-          appUrl: appUrl
-        }),
+    const { data, error } = await supabase.functions.invoke('feishu-proxy/save-and-webhook', {
+      body: {
+        webhookUrl: FEISHU_CONFIG.webhookUrl,
+        reportData: reportData,
+        originalData: analysisResult,
+        appUrl: appUrl
       }
-    );
+    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`服务调用失败: ${errorText}`);
+    if (error) {
+      throw new Error(`服务调用失败: ${error.message || '未知错误'}`);
     }
 
-    const result = await response.json();
-    return { recordId: result.reportId, reportLink: result.shortLink };
+    return { recordId: data.reportId, reportLink: data.shortLink };
   } catch (error) {
     console.error('保存记录失败:', error);
     throw error;
@@ -71,23 +63,16 @@ export const createBitableRecord = async (
 
 export const getBitableRecord = async (recordId: string): Promise<any | null> => {
   try {
-    const response = await fetch(
-      `${SUPABASE_CONFIG.edgeFunctionUrl}/feishu-proxy/get-report?id=${recordId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
-          'apikey': SUPABASE_CONFIG.anonKey
-        }
-      }
-    );
+    const { data, error } = await supabase.functions.invoke(`feishu-proxy/get-report?id=${recordId}`, {
+      method: 'GET'
+    });
 
-    if (!response.ok) {
-      console.error('获取报告失败:', response.statusText);
+    if (error) {
+      console.error('获取报告失败:', error.message || error);
       return null;
     }
 
-    const result = await response.json();
+    const result = data;
     
     // Edge Function 返回格式: { data: { id, title, data: AnalysisResult, ... } }
     // 我们需要返回内部的 AnalysisResult
