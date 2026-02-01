@@ -43,6 +43,8 @@ export const createBitableRecord = async (
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+          'apikey': SUPABASE_CONFIG.anonKey
         },
         body: JSON.stringify({
           webhookUrl: FEISHU_CONFIG.webhookUrl,
@@ -73,6 +75,10 @@ export const getBitableRecord = async (recordId: string): Promise<any | null> =>
       `${SUPABASE_CONFIG.edgeFunctionUrl}/feishu-proxy/get-report?id=${recordId}`,
       {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+          'apikey': SUPABASE_CONFIG.anonKey
+        }
       }
     );
 
