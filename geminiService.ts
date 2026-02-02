@@ -1,8 +1,7 @@
 
 import { QA_CRITERIA_PROMPT } from "./constants";
 import { AnalysisResult, AnalysisInput, AnalysisConfig } from "./types";
-import { SUPABASE_CONFIG } from "./supabaseConfig";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseClient } from "./supabaseClient";
 
 // JSON Schema for structured output
 const responseSchema = {
@@ -77,9 +76,7 @@ export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisC
 
     const fullPrompt = `${systemPrompt}\n\n${transcriptText}\n\n请按照以下JSON格式返回分析结果，所有字符串值必须使用简体中文：\n${JSON.stringify(responseSchema, null, 2)}\n\n请直接返回JSON，不要添加任何markdown代码块标记。`;
 
-    const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-
-    const { data, error } = await supabase.functions.invoke("internal-ai-proxy", {
+    const { data, error } = await supabaseClient.functions.invoke("internal-ai-proxy", {
       body: {
         user: fullPrompt,
         max_tokens: 8192

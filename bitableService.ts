@@ -1,9 +1,6 @@
-import { SUPABASE_CONFIG } from './supabaseConfig';
 import { FEISHU_CONFIG, BITABLE_FIELDS } from './feishuConfig';
 import { AnalysisResult } from './types';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+import { supabaseClient } from './supabaseClient';
 
 export const createBitableRecord = async (
   analysisResult: AnalysisResult,
@@ -40,7 +37,7 @@ export const createBitableRecord = async (
     // 获取当前应用的基础 URL
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 
-    const { data, error } = await supabase.functions.invoke('feishu-proxy/save-and-webhook', {
+    const { data, error } = await supabaseClient.functions.invoke('feishu-proxy/save-and-webhook', {
       body: {
         webhookUrl: FEISHU_CONFIG.webhookUrl,
         reportData: reportData,
@@ -63,7 +60,7 @@ export const createBitableRecord = async (
 
 export const getBitableRecord = async (recordId: string): Promise<any | null> => {
   try {
-    const { data, error } = await supabase.functions.invoke(`feishu-proxy/get-report?id=${recordId}`, {
+    const { data, error } = await supabaseClient.functions.invoke(`feishu-proxy/get-report?id=${recordId}`, {
       method: 'GET'
     });
 
