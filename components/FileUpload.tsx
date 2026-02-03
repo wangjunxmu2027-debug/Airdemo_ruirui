@@ -2,6 +2,7 @@
 import React, { useCallback, useState } from 'react';
 import { AnalysisInput } from '../types';
 import { fetchFeishuDocContent } from '../feishuService';
+import { extractTextFromPDF } from '../pdfParser';
 
 interface Props {
   onAnalyze: (input: AnalysisInput) => void;
@@ -13,6 +14,8 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
   const [activeTab, setActiveTab] = useState<'file' | 'text' | 'feishu'>('file');
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [isPdfParsing, setIsPdfParsing] = useState(false);
 
   // Feishu URL local state
   const [feishuUrl, setFeishuUrl] = useState('');
@@ -29,18 +32,25 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
     }
   }, []);
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     setFileName(file.name);
+    setPdfError(null);
     
     if (file.type === 'application/pdf') {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        const base64Content = result.split(',')[1];
-        onAnalyze({ type: 'pdf', content: base64Content, title: file.name });
-      };
-      reader.readAsDataURL(file);
+      // PDF 文件：解析提取文本
+      setIsPdfParsing(true);
+      try {
+        const extractedText = await extractTextFromPDF(file);
+        setTextInput(extractedText);
+        onAnalyze({ type: 'text', content: extractedText, title: file.name });
+      } catch (error: any) {
+        console.error('PDF 解析错误:', error);
+        setPdfError(error.message || 'PDF 解析失败，请尝试使用纯文字上传');
+      } finally {
+        setIsPdfParsing(false);
+      }
     } else {
+      // 文本文件：直接读取
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
@@ -51,18 +61,18 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
     }
   };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processFile(e.dataTransfer.files[0]);
+      await processFile(e.dataTransfer.files[0]);
     }
   }, [onAnalyze]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      processFile(e.target.files[0]);
+      await processFile(e.target.files[0]);
     }
   };
 
@@ -154,6 +164,19 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
               </div>
             </div>
 
+            {/* PDF Error Message */}
+            {pdfError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 flex items-start gap-2">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="font-medium">PDF 解析失败</p>
+                  <p className="text-red-600 mt-1">{pdfError}</p>
+                </div>
+              </div>
+            )}
+
             <div
               className={`relative flex-1 border border-dashed rounded-xl p-12 text-center transition-all duration-200 group flex flex-col items-center justify-center min-h-[160px] ${
                 dragActive 
@@ -170,17 +193,29 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
                 accept=".txt,.md,.csv,.json,.pdf"
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 onChange={handleFileChange}
-                disabled={isLoading}
+                disabled={isLoading || isPdfParsing}
               />
               <div className="space-y-4 pointer-events-none">
                 <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center transition-colors ${dragActive ? 'bg-blue-100 text-feishu-blue' : 'bg-gray-100 text-gray-400 group-hover:bg-blue-50 group-hover:text-feishu-blue'}`}>
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
+                  {isPdfParsing ? (
+                    <svg className="animate-spin h-6 w-6 text-feishu-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-feishu-text mb-1">
-                    {fileName ? `已选择: ${fileName}` : "点击或拖拽 PDF 文件到此处"}
+                    {isPdfParsing 
+                      ? "正在解析 PDF 内容..." 
+                      : fileName 
+                        ? `已选择: ${fileName}` 
+                        : "点击或拖拽 PDF 文件到此处"
+                    }
                   </p>
                   <p className="text-[10px] text-feishu-subtext">支持 PDF, TXT, MD 格式（建议优先使用 PDF 以获得最佳分析效果）</p>
                 </div>

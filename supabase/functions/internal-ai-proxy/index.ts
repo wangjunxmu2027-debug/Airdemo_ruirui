@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, X-Client-Info",
 };
 
 const encoder = new TextEncoder();
@@ -70,9 +70,23 @@ serve(async (req) => {
       });
     }
 
+    // 支持模型切换，默认使用 gemini-3-pro-preview-new
+    const model = body.model || "gemini-3-pro-preview-new";
+    
+    // 调试日志：记录接收到的模型参数
+    console.log("[internal-ai-proxy] Received model:", body.model);
+    console.log("[internal-ai-proxy] Using model:", model);
+    console.log("[internal-ai-proxy] Request body keys:", Object.keys(body));
+    
+    // 构建请求体，添加模型参数
+    const requestPayload = {
+      ...body,
+      model: model,
+    };
+
     const nonce = generateNonce();
     const timestamp = Date.now().toString();
-    const { body: requestBody, bodyData } = coerceBody(body);
+    const { body: requestBody, bodyData } = coerceBody(requestPayload);
     const dataToSign = bodyData;
     const dataSorted = normalizeData((dataToSign as Record<string, unknown>) || {});
     const message = nonce + timestamp + JSON.stringify(dataSorted);
@@ -92,9 +106,17 @@ serve(async (req) => {
     });
 
     const text = await proxyResponse.text();
+    
+    // 在响应头中添加模型信息，方便调试
+    const responseHeaders = {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+      "X-Used-Model": model,
+    };
+    
     return new Response(text, {
       status: proxyResponse.status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: responseHeaders,
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {

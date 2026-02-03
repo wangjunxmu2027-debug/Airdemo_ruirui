@@ -70,16 +70,15 @@ export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisC
       ? `${rawText.slice(0, headLen)}\n\n[内容过长已截断]\n\n${rawText.slice(-tailLen)}`
       : rawText;
 
-    const transcriptText = input.type === 'pdf'
-      ? `以下是从PDF解析得到的会议逐字稿内容（已自动截断至${MAX_CHARS}字以内）：\n\n${text}`
-      : `以下是会议逐字稿内容（已自动截断至${MAX_CHARS}字以内）：\n\n${text}`;
+    const transcriptText = `以下是会议逐字稿内容（已自动截断至${MAX_CHARS}字以内）：\n\n${text}`;
 
     const fullPrompt = `${systemPrompt}\n\n${transcriptText}\n\n请按照以下JSON格式返回分析结果，所有字符串值必须使用简体中文：\n${JSON.stringify(responseSchema, null, 2)}\n\n请直接返回JSON，不要添加任何markdown代码块标记。`;
 
     const { data, error } = await supabaseClient.functions.invoke("internal-ai-proxy", {
       body: {
         user: fullPrompt,
-        max_tokens: 8192
+        max_tokens: 8192,
+        model: config?.model || "gemini-3-pro-preview-new"
       }
     });
 

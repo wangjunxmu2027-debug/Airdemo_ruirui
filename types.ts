@@ -47,6 +47,7 @@ export interface AnalysisInput {
 
 export interface AnalysisConfig {
   systemInstruction?: string;
+  model?: string; // 可选的模型参数，如 'gemini-3-pro-preview-new'
 }
 
 export interface HistoryItem {
