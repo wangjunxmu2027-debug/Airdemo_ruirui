@@ -1,5 +1,6 @@
 export const FEISHU_CONFIG = {
-  webhookUrl: 'https://bytedance.larkoffice.com/base/automation/webhook/event/XuHaa6tTIwUiHlhcKC8c1iuPnKh'
+  webhookUrl: 'https://bytedance.larkoffice.com/base/automation/webhook/event/XuHaa6tTIwUiHlhcKC8c1iuPnKh',
+  bitableUrl: 'https://bytedance.larkoffice.com/base/QxS7bwp0waPF5IsqvkrcWPQSnNf?table=tblcY1qZTWOWeXLf&view=vewaFYDOaG'
 };
 
 export const FEISHU_API_BASE = 'https://open.feishu.cn/open-apis';

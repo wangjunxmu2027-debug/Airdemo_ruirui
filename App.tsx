@@ -10,6 +10,7 @@ import { analyzeTranscript } from './geminiService';
 import { EVALUATION_DIMENSIONS_UI } from './constants';
 import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
 import { createBitableRecord } from './bitableService';
+import { FEISHU_CONFIG } from './feishuConfig';
 import ReportView from './components/ReportView';
 
 function App() {
@@ -325,7 +326,7 @@ function App() {
                         </svg>
                         已保存到多维表格
                         <button
-                          onClick={() => window.open(shareLink, '_blank')}
+                          onClick={() => window.open(FEISHU_CONFIG.bitableUrl, '_blank')}
                           className="ml-2 text-emerald-700 hover:text-emerald-900 underline"
                         >
                           查看记录
