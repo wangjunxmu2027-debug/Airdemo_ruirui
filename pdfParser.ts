@@ -1,8 +1,9 @@
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker?url';
 
 // 设置 PDF.js worker
 // 使用 CDN 版本的 worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 /**
  * 从 PDF 文件中提取文本内容
