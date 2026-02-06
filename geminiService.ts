@@ -2,6 +2,7 @@
 import { QA_CRITERIA_PROMPT } from "./constants";
 import { AnalysisResult, AnalysisInput, AnalysisConfig } from "./types";
 import { supabaseClient } from "./supabaseClient";
+import { SUPABASE_CONFIG } from "./supabaseConfig";
 
 // JSON Schema for structured output
 const responseSchema = {
@@ -74,16 +75,38 @@ export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisC
 
     const fullPrompt = `${systemPrompt}\n\n${transcriptText}\n\n请按照以下JSON格式返回分析结果，所有字符串值必须使用简体中文：\n${JSON.stringify(responseSchema, null, 2)}\n\n请直接返回JSON，不要添加任何markdown代码块标记。`;
 
-    const { data, error } = await supabaseClient.functions.invoke("internal-ai-proxy", {
-      body: {
-        user: fullPrompt,
-        max_tokens: 8192,
-        model: config?.model || "gemini-3-pro-preview-new"
-      }
-    });
+    const requestBody = {
+      user: fullPrompt,
+      max_tokens: 8192,
+      model: config?.model || "gemini-3-pro-preview-new"
+    };
+
+    let data: any = null;
+    let error: any = null;
+    try {
+      const result = await supabaseClient.functions.invoke("internal-ai-proxy", {
+        body: requestBody
+      });
+      data = result.data;
+      error = result.error;
+    } catch (e) {
+      error = e;
+    }
 
     if (error) {
-      throw new Error(error.message || "内部 API 调用失败");
+      const fallbackResult = await fetch(`${SUPABASE_CONFIG.edgeFunctionUrl}/internal-ai-proxy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_CONFIG.anonKey}`,
+          "apikey": SUPABASE_CONFIG.anonKey
+        },
+        body: JSON.stringify(requestBody)
+      });
+      if (!fallbackResult.ok) {
+        throw new Error(`内部 API 调用失败: ${fallbackResult.status}`);
+      }
+      data = await fallbackResult.json();
     }
 
     let content =
