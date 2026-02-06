@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import * as htmlToImage from 'html-to-image';
 import AnalysisDashboard from './AnalysisDashboard';
 import { AnalysisResult } from '../types';
 import { getBitableRecord } from '../bitableService';
@@ -9,6 +10,8 @@ const ReportView: React.FC = () => {
   const [title, setTitle] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadReport = async () => {
@@ -85,6 +88,34 @@ const ReportView: React.FC = () => {
     );
   }
 
+  const handleCapture = async () => {
+    if (isCapturing) return;
+    setIsCapturing(true);
+    setCaptureError(null);
+    const element = document.getElementById('dashboard-capture-area');
+    if (!element) {
+      setCaptureError('未找到可截图的区域');
+      setIsCapturing(false);
+      return;
+    }
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const dataUrl = await htmlToImage.toPng(element, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2
+      });
+      const link = document.createElement('a');
+      const safeTitle = (title || '复盘报告').replace(/[\\/:*?"<>|]/g, '_');
+      link.download = `${safeTitle}_长截图.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (e) {
+      setCaptureError('生成截图失败，请重试');
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-feishu-bg pb-12">
       <nav className="bg-white border-b border-feishu-border sticky top-0 z-50">
@@ -109,9 +140,21 @@ const ReportView: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-6 py-10">
         <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-6 bg-feishu-blue rounded-full"></div>
-            <h1 className="text-2xl font-bold text-feishu-text">复盘报告</h1>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-6 bg-feishu-blue rounded-full"></div>
+              <h1 className="text-2xl font-bold text-feishu-text">复盘报告</h1>
+            </div>
+            <div className="flex items-center gap-3">
+              {captureError && <span className="text-xs text-red-500">{captureError}</span>}
+              <button
+                onClick={handleCapture}
+                disabled={isCapturing}
+                className="px-4 py-2 text-sm text-white bg-feishu-blue hover:bg-feishu-hover border border-transparent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center gap-2"
+              >
+                {isCapturing ? '正在生成...' : '一键生成长截图'}
+              </button>
+            </div>
           </div>
           <AnalysisDashboard result={result} />
         </div>
