@@ -83,18 +83,8 @@ export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisC
 
     let data: any = null;
     let error: any = null;
-    try {
-      const result = await supabaseClient.functions.invoke("internal-ai-proxy", {
-        body: requestBody
-      });
-      data = result.data;
-      error = result.error;
-    } catch (e) {
-      error = e;
-    }
-
-    if (error) {
-      const fallbackResult = await fetch(`${SUPABASE_CONFIG.edgeFunctionUrl}/internal-ai-proxy`, {
+    if (import.meta.env.DEV) {
+      const fallbackResult = await fetch("/functions/v1/internal-ai-proxy", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,6 +97,32 @@ export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisC
         throw new Error(`内部 API 调用失败: ${fallbackResult.status}`);
       }
       data = await fallbackResult.json();
+    } else {
+      try {
+        const result = await supabaseClient.functions.invoke("internal-ai-proxy", {
+          body: requestBody
+        });
+        data = result.data;
+        error = result.error;
+      } catch (e) {
+        error = e;
+      }
+
+      if (error) {
+        const fallbackResult = await fetch(`${SUPABASE_CONFIG.edgeFunctionUrl}/internal-ai-proxy`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_CONFIG.anonKey}`,
+            "apikey": SUPABASE_CONFIG.anonKey
+          },
+          body: JSON.stringify(requestBody)
+        });
+        if (!fallbackResult.ok) {
+          throw new Error(`内部 API 调用失败: ${fallbackResult.status}`);
+        }
+        data = await fallbackResult.json();
+      }
     }
 
     let content =

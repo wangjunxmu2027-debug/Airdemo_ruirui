@@ -62,7 +62,20 @@ serve(async (req) => {
       });
     }
 
-    const body = await req.json();
+    let body: any = null;
+    const clonedReq = req.clone();
+    try {
+      body = await req.json();
+    } catch (e) {
+      const raw = await clonedReq.text();
+      const start = raw.indexOf("{");
+      const end = raw.lastIndexOf("}");
+      if (start !== -1 && end !== -1 && end > start) {
+        body = JSON.parse(raw.slice(start, end + 1));
+      } else {
+        throw e;
+      }
+    }
     if (!body?.user) {
       return new Response(JSON.stringify({ error: "Missing user content" }), {
         status: 400,
