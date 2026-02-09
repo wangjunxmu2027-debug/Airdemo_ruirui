@@ -19,6 +19,7 @@ export interface AnalysisResult {
   customerName?: string; // Extracted customer name
   reporterName?: string; // Extracted reporter name
   reportSummary?: string; // "给谁汇报了什么"
+  meetingDate?: string;
   totalScore: number;
   summary: string;
   dimensions: DimensionScore[];
@@ -43,6 +44,7 @@ export interface AnalysisInput {
   type: 'text' | 'pdf';
   content: string;
   title?: string;
+  meetingDate?: string;
 }
 
 export interface AnalysisConfig {

@@ -92,9 +92,11 @@ Please extract the following information from the transcript context with high p
         *   "CEO：飞书CXO行业FP介绍"
         *   "杨协成中国区CEO、香港&中国区销售负责人及团队"
         *   "研发团队、大数据、AI团队"
+4.  **Meeting Date (会议日期):** Extract the meeting date from the transcript. 
+    *   **STRICT FORMAT:** Use "YYYY/M/D" only. If not found, return "未知".
 
 **Output Requirement:**
-1. **Metadata:** Extract Customer Name, Reporter Name, and Report Summary based on the rules above.
+1. **Metadata:** Extract Customer Name, Reporter Name, Report Summary, and Meeting Date based on the rules above.
 2. **Scoring Table:** Evaluate all 5 dimensions. Provide Score, Positive Observations (Highlights), and Negative Observations (Deductions).
 3. **High Difficulty Defense Replay (Part 2):** Extract 1-3 of the most difficult questions/challenges from the meeting. Create a structured list with:
    - Client Challenge/Question

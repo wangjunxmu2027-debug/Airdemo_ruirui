@@ -2,6 +2,7 @@
 import React, { useCallback, useState } from 'react';
 import { AnalysisInput } from '../types';
 import { fetchFeishuDocContent } from '../feishuService';
+import { extractMeetingDateFromText } from '../utils';
 
 interface Props {
   onAnalyze: (input: AnalysisInput) => void;
@@ -45,7 +46,8 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
       reader.onload = (e) => {
         const text = e.target?.result as string;
         setTextInput(text);
-        onAnalyze({ type: 'text', content: text, title: file.name });
+        const meetingDate = extractMeetingDateFromText(text);
+        onAnalyze({ type: 'text', content: text, title: file.name, meetingDate: meetingDate || undefined });
       };
       reader.readAsText(file);
     }
@@ -78,7 +80,8 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
     try {
       const docContent = await fetchFeishuDocContent(feishuUrl);
       const today = new Date().toLocaleDateString('zh-CN');
-      onAnalyze({ type: 'text', content: docContent, title: `飞书文档导入 - ${today}` });
+      const meetingDate = extractMeetingDateFromText(docContent);
+      onAnalyze({ type: 'text', content: docContent, title: `飞书文档导入 - ${today}`, meetingDate: meetingDate || undefined });
     } catch (error: any) {
       console.error(error);
       setFeishuError(error.message || "获取文档内容失败，请检查链接权限");

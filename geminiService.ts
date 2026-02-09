@@ -14,6 +14,7 @@ const responseSchema = {
     customerName: { type: "string", description: "The specific customer/company name (e.g., 'Haitian', 'Jiannanchun'). Infer from context if not explicit." },
     reporterName: { type: "string", description: "The name of the main pre-sales consultant/reporter." },
     reportSummary: { type: "string", description: "Who was briefed and what? E.g., 'Chairman & Management: CXO Report', 'R&D Team: AI Capability Demo'." },
+    meetingDate: { type: "string", description: "Meeting date in format YYYY/M/D, or 未知 if not found." },
     totalScore: { type: "number", description: "The total calculated score out of 100." },
     summary: { type: "string", description: "A brief summary of the pre-sales session." },
     executiveSummary: { type: "string", description: "A high-level verdict for the sales director." },
@@ -56,7 +57,7 @@ const responseSchema = {
     },
     generalSuggestions: { type: "string", description: "Overall supplementary advice for the pre-sales consultant." }
   },
-  required: ["totalScore", "summary", "executiveSummary", "dimensions", "generalSuggestions", "difficultQuestions", "customerName", "reporterName", "reportSummary"]
+  required: ["totalScore", "summary", "executiveSummary", "dimensions", "generalSuggestions", "difficultQuestions", "customerName", "reporterName", "reportSummary", "meetingDate"]
 };
 
 export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisConfig): Promise<AnalysisResult> => {

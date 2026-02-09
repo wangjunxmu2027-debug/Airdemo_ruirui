@@ -5,6 +5,37 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
+const extractMeetingDate = (analysisResult: AnalysisResult): string | null => {
+  if (analysisResult.meetingDate) {
+    const match = analysisResult.meetingDate.match(/(\d{4})[年\/\-.](\d{1,2})[月\/\-.](\d{1,2})日?/);
+    if (match) {
+      const year = match[1];
+      const month = String(Number(match[2]));
+      const day = String(Number(match[3]));
+      return `${year}/${month}/${day}`;
+    }
+  }
+  const parts: string[] = [];
+  if (analysisResult.reportSummary) parts.push(analysisResult.reportSummary);
+  if (analysisResult.executiveSummary) parts.push(analysisResult.executiveSummary);
+  if (analysisResult.summary) parts.push(analysisResult.summary);
+  if (analysisResult.generalSuggestions) parts.push(analysisResult.generalSuggestions);
+  if (analysisResult.dimensions?.length) {
+    analysisResult.dimensions.forEach((dimension) => {
+      parts.push(dimension.improvementSuggestions);
+      parts.push(...dimension.positiveObservations);
+      parts.push(...dimension.negativeObservations);
+    });
+  }
+  const text = parts.join(' ');
+  const match = text.match(/(\d{4})[年\/\-.](\d{1,2})[月\/\-.](\d{1,2})日?/);
+  if (!match) return null;
+  const year = match[1];
+  const month = String(Number(match[2]));
+  const day = String(Number(match[3]));
+  return `${year}/${month}/${day}`;
+};
+
 export const createBitableRecord = async (
   analysisResult: AnalysisResult,
   title: string,
@@ -27,10 +58,12 @@ export const createBitableRecord = async (
     const summary = analysisResult.reportSummary || (analysisResult.executiveSummary ? analysisResult.executiveSummary.slice(0, 100) + '...' : '无摘要');
 
     // 构造极简数据 - 仅包含用户指定的字段
+    const meetingDate = extractMeetingDate(analysisResult);
+    const reportDate = meetingDate || new Date().toLocaleDateString('zh-CN');
     const reportData = {
       [BITABLE_FIELDS.CUSTOMER_NAME]: customerName,
       [BITABLE_FIELDS.REPORTER]: reporter,
-      [BITABLE_FIELDS.REPORT_DATE]: new Date().toLocaleDateString('zh-CN'),
+      [BITABLE_FIELDS.REPORT_DATE]: reportDate,
       [BITABLE_FIELDS.SUMMARY]: summary,
       [BITABLE_FIELDS.SCREENSHOT]: screenshotUrl,
       [BITABLE_FIELDS.SCORE]: analysisResult.totalScore,

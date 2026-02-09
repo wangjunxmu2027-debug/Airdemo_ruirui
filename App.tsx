@@ -10,6 +10,8 @@ import { analyzeTranscript } from './geminiService';
 import { EVALUATION_DIMENSIONS_UI } from './constants';
 import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
 import { createBitableRecord } from './bitableService';
+import { extractMeetingDateFromText } from './utils';
+import { captureScreenshot } from './screenshotUtils';
 import ReportView from './components/ReportView';
 
 function App() {
@@ -39,6 +41,8 @@ function App() {
   const [isSavingToBitable, setIsSavingToBitable] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
   const [hasAutoPushed, setHasAutoPushed] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   // Simulation logic for progress steps
   useEffect(() => {
@@ -86,6 +90,10 @@ function App() {
       const data = await analyzeTranscript(input, {
         systemInstruction: customPrompt || undefined
       });
+      const meetingDate = input.meetingDate || (input.type === 'text' ? extractMeetingDateFromText(input.content) : null);
+      if (meetingDate) {
+        data.meetingDate = meetingDate;
+      }
       setResult(data);
       setStatus(AnalysisStatus.COMPLETE);
       
@@ -98,6 +106,32 @@ function App() {
       console.error(err);
       setStatus(AnalysisStatus.ERROR);
       setErrorMsg(err.message || "分析失败，请检查API Key或文件格式后重试。");
+    }
+  };
+
+  const handleCapture = async () => {
+    if (isCapturing) return;
+    setIsCapturing(true);
+    setCaptureError(null);
+    try {
+      const base64 = await captureScreenshot('dashboard-capture-area');
+      if (!base64) {
+        setCaptureError('生成截图失败，请重试');
+        setIsCapturing(false);
+        return;
+      }
+      const dataUrl = `data:image/png;base64,${base64}`;
+      const link = document.createElement('a');
+      const safeTitle = (currentTitle || '复盘报告').replace(/[\\/:*?"<>|]/g, '_');
+      link.download = `${safeTitle}_长截图.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      setCaptureError('生成截图失败，请重试');
+    } finally {
+      setIsCapturing(false);
     }
   };
 
@@ -309,6 +343,11 @@ function App() {
                   </div>
                   
                   <div className="flex gap-3">
+                    {captureError && (
+                      <div className="px-4 py-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                        {captureError}
+                      </div>
+                    )}
                     {isSavingToBitable && (
                       <div className="px-4 py-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
                         <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -332,6 +371,13 @@ function App() {
                         </button>
                       </div>
                     )}
+                    <button
+                      onClick={handleCapture}
+                      disabled={isCapturing}
+                      className="px-4 py-2 text-sm text-white bg-feishu-blue hover:bg-feishu-hover border border-transparent rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                    >
+                      {isCapturing ? '正在生成...' : '一键生成长截图'}
+                    </button>
                     <button 
                       onClick={navToHistory}
                       className="px-4 py-2 text-sm text-feishu-subtext hover:text-feishu-text bg-white border border-feishu-border rounded-lg hover:bg-gray-50 transition-colors"

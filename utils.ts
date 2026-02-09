@@ -26,3 +26,13 @@ export const generateMarkdown = (result: AnalysisResult): string => {
   
   return markdown;
 };
+
+export const extractMeetingDateFromText = (text: string): string | null => {
+  if (!text) return null;
+  const match = text.match(/(\d{4})[年\/\-.](\d{1,2})[月\/\-.](\d{1,2})日?/);
+  if (!match) return null;
+  const year = match[1];
+  const month = String(Number(match[2]));
+  const day = String(Number(match[3]));
+  return `${year}/${month}/${day}`;
+};
