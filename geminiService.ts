@@ -1,13 +1,11 @@
-
 import { QA_CRITERIA_PROMPT } from "./constants";
 import { AnalysisResult, AnalysisInput, AnalysisConfig } from "./types";
+import { hmacFetch } from "./hmacFetch";
 
-// API 配置 - 请在 .env.local 文件中设置 API_KEY 和 BASE_URL
-const API_SECRET_KEY = process.env.API_KEY || "";
-const BASE_URL = process.env.BASE_URL || "";
-const MODEL = "gemini-3-pro-preview";
+const isDev = import.meta.env.DEV;
+const API_URL = isDev ? "/api/ai" : "https://magic.solutionsuite.cn/api/ai";
+const MODEL = "gemini-3-pro-preview-new";
 
-// JSON Schema for structured output
 const responseSchema = {
   type: "object",
   properties: {
@@ -61,72 +59,36 @@ const responseSchema = {
 };
 
 export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisConfig): Promise<AnalysisResult> => {
-  if (!API_SECRET_KEY) {
-    throw new Error("API Key is missing. Please check your environment configuration.");
-  }
-
   try {
-    // Determine System Instruction: Use custom if provided, otherwise default
     const systemPrompt = config?.systemInstruction 
       ? `You are a Senior Pre-sales Quality Assurance Expert. STRICTLY FOLLOW the user-provided evaluation criteria below:\n\n${config.systemInstruction}`
       : QA_CRITERIA_PROMPT;
 
-    // Construct user message based on input type
-    let userMessage: string;
-    const messages: Array<{role: string, content: string | Array<any>}> = [];
+    const MAX_CHARS = 8000;
+    const headLen = 5000;
+    const tailLen = 3000;
+    const rawText = input.content || "";
+    const text = rawText.length > MAX_CHARS
+      ? `${rawText.slice(0, headLen)}\n\n[内容过长已截断]\n\n${rawText.slice(-tailLen)}`
+      : rawText;
 
-    // Add system message
-    messages.push({
-      role: "system",
-      content: systemPrompt
-    });
+    const transcriptText = `以下是会议逐字稿内容（已自动截断至${MAX_CHARS}字以内）：\n\n${text}`;
 
-    if (input.type === 'pdf') {
-      // For PDF, we need to send as image/file content
-      // Most OpenAI-compatible APIs support base64 images in content array
-      userMessage = "Please analyze the meeting transcript contained in the attached PDF file.";
-      messages.push({
-        role: "user",
-        content: [
-          { type: "text", text: userMessage },
-          { 
-            type: "file",
-            file: {
-              filename: "transcript.pdf",
-              file_data: `data:application/pdf;base64,${input.content}`
-            }
-          }
-        ]
-      });
-    } else {
-      userMessage = `Here is the meeting transcript to analyze:\n\n${input.content}`;
-      messages.push({
-        role: "user",
-        content: userMessage
-      });
-    }
+    const fullPrompt = `${systemPrompt}\n\n${transcriptText}\n\n请按照以下JSON格式返回分析结果，所有字符串值必须使用简体中文：\n${JSON.stringify(responseSchema, null, 2)}\n\n请直接返回JSON，不要添加任何markdown代码块标记。`;
 
-    // Add instruction for JSON output
-    messages.push({
-      role: "user", 
-      content: `请按照以下JSON格式返回分析结果，所有字符串值必须使用简体中文：
-${JSON.stringify(responseSchema, null, 2)}
+    const requestBody = {
+      user: fullPrompt,
+      max_tokens: 8192,
+      model: config?.model || MODEL
+    };
 
-请直接返回JSON，不要添加任何markdown代码块标记。`
-    });
-
-    const response = await fetch(`${BASE_URL}/chat/completions`, {
+    const response = await hmacFetch(API_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_SECRET_KEY}`
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 8192
-      })
+      body: requestBody,
+      hmac: {
+        secret: '2a86a17e674560f6926f8ae647b895ce',
+        data: requestBody
+      }
     });
 
     if (!response.ok) {
@@ -137,13 +99,17 @@ ${JSON.stringify(responseSchema, null, 2)}
 
     const data = await response.json();
     
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    let content =
+      data?.result ||
+      data?.data?.result ||
+      data?.choices?.[0]?.message?.content ||
+      data?.choices?.[0]?.text ||
+      "";
+
+    if (!content) {
       throw new Error("API返回格式异常");
     }
-
-    let content = data.choices[0].message.content;
     
-    // Clean up the response - remove markdown code blocks if present
     if (content.startsWith('```json')) {
       content = content.slice(7);
     } else if (content.startsWith('```')) {

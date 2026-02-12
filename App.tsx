@@ -364,7 +364,7 @@ function App() {
                         </svg>
                         已保存到多维表格
                         <button
-                          onClick={() => window.open(shareLink, '_blank')}
+                          onClick={() => window.open('https://bytedance.larkoffice.com/base/QxS7bwp0waPF5IsqvkrcWPQSnNf?table=tblcY1qZTWOWeXLf&view=vewaFYDOaG', '_blank')}
                           className="ml-2 text-emerald-700 hover:text-emerald-900 underline"
                         >
                           查看记录

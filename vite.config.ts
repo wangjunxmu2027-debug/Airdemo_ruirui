@@ -8,6 +8,13 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 8080,
         host: '0.0.0.0',
+        proxy: {
+          '/api/ai': {
+            target: 'https://magic.solutionsuite.cn',
+            changeOrigin: true,
+            secure: true,
+          }
+        }
       },
       plugins: [react()],
       define: {
@@ -15,7 +22,6 @@ export default defineConfig(({ mode }) => {
         'process.env.BASE_URL': JSON.stringify(env.BASE_URL || env.API_BASE_URL || ''),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
       },
-      // VITE_APP_URL 使用 VITE_ 前缀会被 Vite 自动注入到 import.meta.env
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),

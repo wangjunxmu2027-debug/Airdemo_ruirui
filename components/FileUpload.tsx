@@ -1,8 +1,8 @@
-
 import React, { useCallback, useState } from 'react';
 import { AnalysisInput } from '../types';
 import { fetchFeishuDocContent } from '../feishuService';
 import { extractMeetingDateFromText } from '../utils';
+import { extractTextFromPDF } from '../pdfParser';
 
 interface Props {
   onAnalyze: (input: AnalysisInput) => void;
@@ -15,7 +15,6 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
 
-  // Feishu URL local state
   const [feishuUrl, setFeishuUrl] = useState('');
   const [isFeishuLoading, setIsFeishuLoading] = useState(false);
   const [feishuError, setFeishuError] = useState<string | null>(null);
@@ -30,17 +29,18 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
     }
   }, []);
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     setFileName(file.name);
     
     if (file.type === 'application/pdf') {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        const base64Content = result.split(',')[1];
-        onAnalyze({ type: 'pdf', content: base64Content, title: file.name });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const pdfText = await extractTextFromPDF(file);
+        const meetingDate = extractMeetingDateFromText(pdfText);
+        onAnalyze({ type: 'text', content: pdfText, title: file.name, meetingDate: meetingDate || undefined });
+      } catch (error: any) {
+        console.error('PDF 解析失败:', error);
+        alert(error.message || 'PDF 解析失败，请确保文件不是扫描件');
+      }
     } else {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -92,7 +92,6 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-feishu-border overflow-hidden feishu-shadow">
-      {/* Tabs */}
       <div className="flex border-b border-feishu-border bg-gray-50/50">
         <button
           onClick={() => setActiveTab('file')}
@@ -130,10 +129,8 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
       </div>
 
       <div className="p-8 min-h-[320px]">
-        {/* FILE TAB */}
         {activeTab === 'file' && (
           <div className="h-full flex flex-col space-y-6">
-            {/* Guide Section */}
             <div className="bg-slate-50 border border-slate-100 rounded-xl p-5">
               <h4 className="text-sm font-bold text-feishu-text mb-3 flex items-center gap-2">
                 <svg className="w-4 h-4 text-feishu-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,7 +189,6 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
           </div>
         )}
 
-        {/* TEXT TAB */}
         {activeTab === 'text' && (
           <div className="space-y-4 h-full flex flex-col">
             <textarea
@@ -224,7 +220,6 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
           </div>
         )}
 
-        {/* FEISHU DOC TAB */}
         {activeTab === 'feishu' && (
           <div className="space-y-6 animate-fade-in">
              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800 flex items-start gap-2">
