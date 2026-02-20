@@ -81,14 +81,28 @@ export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisC
       model: config?.model || MODEL
     };
 
-    const response = await hmacFetch(API_URL, {
-      method: 'POST',
-      body: requestBody,
-      hmac: {
-        secret: '2a86a17e674560f6926f8ae647b895ce',
-        data: requestBody
-      }
-    });
+    const isDev = import.meta.env.DEV;
+    
+    let response: Response;
+    
+    if (isDev) {
+      response = await hmacFetch(API_URL, {
+        method: 'POST',
+        body: requestBody,
+        hmac: {
+          secret: '2a86a17e674560f6926f8ae647b895ce',
+          data: requestBody
+        }
+      });
+    } else {
+      response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+    }
 
     if (!response.ok) {
       const errorData = await response.text();

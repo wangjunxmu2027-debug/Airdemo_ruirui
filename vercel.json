@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/api/ai",
-      "destination": "https://magic.solutionsuite.cn/api/ai"
-    },
-    {
       "source": "/functions/v1/:path*",
       "destination": "https://xqsviesaffzksjuqbxey.supabase.co/functions/v1/:path*"
     },
