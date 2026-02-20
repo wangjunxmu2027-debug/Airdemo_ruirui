@@ -1,6 +1,5 @@
 import { QA_CRITERIA_PROMPT } from "./constants";
 import { AnalysisResult, AnalysisInput, AnalysisConfig } from "./types";
-import { hmacFetch } from "./hmacFetch";
 
 const API_URL = "/api/ai";
 const MODEL = "gemini-3-pro-preview-new";
@@ -81,13 +80,12 @@ export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisC
       model: config?.model || MODEL
     };
 
-    const response = await hmacFetch(API_URL, {
+    const response = await fetch(API_URL, {
       method: 'POST',
-      body: requestBody,
-      hmac: {
-        secret: '2a86a17e674560f6926f8ae647b895ce',
-        data: requestBody
-      }
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
