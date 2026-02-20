@@ -1,5 +1,6 @@
 export const config = {
   runtime: 'edge',
+  maxDuration: 60,
 };
 
 const SECRET_KEY = '2a86a17e674560f6926f8ae647b895ce';
@@ -66,6 +67,9 @@ export default async function handler(request: Request): Promise<Response> {
     const timestamp = Date.now().toString();
     const signature = await generateSignature(nonce, timestamp, SECRET_KEY, body);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000);
+
     const response = await fetch(TARGET_API, {
       method: 'POST',
       headers: {
@@ -76,7 +80,10 @@ export default async function handler(request: Request): Promise<Response> {
         'Codoc-Env': 'Shortcut',
       },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const data = await response.text();
 
@@ -91,7 +98,10 @@ export default async function handler(request: Request): Promise<Response> {
     });
   } catch (error) {
     console.error('API proxy error:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+    const errorMessage = error instanceof Error && error.name === 'AbortError' 
+      ? 'Request timeout' 
+      : 'Internal Server Error';
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
