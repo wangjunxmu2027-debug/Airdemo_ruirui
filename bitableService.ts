@@ -5,6 +5,9 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
+const isDev = import.meta.env.DEV;
+const EDGE_FUNCTION_BASE = isDev ? '/functions/v1' : SUPABASE_CONFIG.edgeFunctionUrl;
+
 const extractMeetingDate = (analysisResult: AnalysisResult): string | null => {
   if (analysisResult.meetingDate) {
     const match = analysisResult.meetingDate.match(/(\d{4})[年\/\-.](\d{1,2})[月\/\-.](\d{1,2})日?/);
@@ -36,6 +39,32 @@ const extractMeetingDate = (analysisResult: AnalysisResult): string | null => {
   return `${year}/${month}/${day}`;
 };
 
+async function invokeEdgeFunction(functionName: string, body: any): Promise<{ data: any; error: any }> {
+  const url = `${EDGE_FUNCTION_BASE}/${functionName}`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+        'apikey': SUPABASE_CONFIG.anonKey
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { data: null, error: { message: `HTTP ${response.status}: ${errorText}` } };
+    }
+
+    const data = await response.json();
+    return { data, error: null };
+  } catch (e: any) {
+    return { data: null, error: { message: e.message || 'Request failed' } };
+  }
+}
+
 export const createBitableRecord = async (
   analysisResult: AnalysisResult,
   title: string,
@@ -47,17 +76,10 @@ export const createBitableRecord = async (
   }
 
   try {
-    // 优先使用 AI 提取的字段，如果未提取到则回退到默认值
-    // Customer Name: AI提取 > 文件名
     const customerName = analysisResult.customerName || title;
-    
-    // Reporter: AI提取 > 默认"售前顾问"
     const reporter = analysisResult.reporterName || analyst || '售前顾问';
-    
-    // Summary: AI提取 > 执行摘要前50字
     const summary = analysisResult.reportSummary || (analysisResult.executiveSummary ? analysisResult.executiveSummary.slice(0, 100) + '...' : '无摘要');
 
-    // 构造极简数据 - 仅包含用户指定的字段
     const meetingDate = extractMeetingDate(analysisResult);
     const reportDate = meetingDate || new Date().toLocaleDateString('zh-CN');
     const reportData = {
@@ -67,19 +89,15 @@ export const createBitableRecord = async (
       [BITABLE_FIELDS.SUMMARY]: summary,
       [BITABLE_FIELDS.SCREENSHOT]: screenshotUrl,
       [BITABLE_FIELDS.SCORE]: analysisResult.totalScore,
-      // 报告链接字段在 Edge Function 中生成并填充
     };
 
-    // 获取当前应用的基础 URL
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 
-    const { data, error } = await supabase.functions.invoke('feishu-proxy/save-and-webhook', {
-      body: {
-        webhookUrl: FEISHU_CONFIG.webhookUrl,
-        reportData: reportData,
-        originalData: analysisResult,
-        appUrl: appUrl
-      }
+    const { data, error } = await invokeEdgeFunction('feishu-proxy/save-and-webhook', {
+      webhookUrl: FEISHU_CONFIG.webhookUrl,
+      reportData: reportData,
+      originalData: analysisResult,
+      appUrl: appUrl
     });
 
     if (error) {
@@ -96,19 +114,23 @@ export const createBitableRecord = async (
 
 export const getBitableRecord = async (recordId: string): Promise<any | null> => {
   try {
-    const { data, error } = await supabase.functions.invoke(`feishu-proxy/get-report?id=${recordId}`, {
-      method: 'GET'
+    const url = `${EDGE_FUNCTION_BASE}/feishu-proxy/get-report?id=${recordId}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+        'apikey': SUPABASE_CONFIG.anonKey
+      }
     });
 
-    if (error) {
-      console.error('获取报告失败:', error.message || error);
+    if (!response.ok) {
+      console.error('获取报告失败:', response.status);
       return null;
     }
 
-    const result = data;
+    const result = await response.json();
     
-    // Edge Function 返回格式: { data: { id, title, data: AnalysisResult, ... } }
-    // 我们需要返回内部的 AnalysisResult
     if (result.data && result.data.data) {
       return result.data.data;
     }

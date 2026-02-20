@@ -13,6 +13,11 @@ export default defineConfig(({ mode }) => {
             target: 'https://magic.solutionsuite.cn',
             changeOrigin: true,
             secure: true,
+          },
+          '/functions/v1': {
+            target: 'https://xqsviesaffzksjuqbxey.supabase.co',
+            changeOrigin: true,
+            secure: true,
           }
         }
       },
