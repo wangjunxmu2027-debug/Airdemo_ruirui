@@ -5,8 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
-const isDev = import.meta.env.DEV;
-const EDGE_FUNCTION_BASE = isDev ? '/functions/v1' : SUPABASE_CONFIG.edgeFunctionUrl;
+const EDGE_FUNCTION_BASE = '/functions/v1';
 
 const extractMeetingDate = (analysisResult: AnalysisResult): string | null => {
   if (analysisResult.meetingDate) {

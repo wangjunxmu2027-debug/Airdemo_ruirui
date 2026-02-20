@@ -2,8 +2,7 @@ import { QA_CRITERIA_PROMPT } from "./constants";
 import { AnalysisResult, AnalysisInput, AnalysisConfig } from "./types";
 import { hmacFetch } from "./hmacFetch";
 
-const isDev = import.meta.env.DEV;
-const API_URL = isDev ? "/api/ai" : "https://magic.solutionsuite.cn/api/ai";
+const API_URL = "/api/ai";
 const MODEL = "gemini-3-pro-preview-new";
 
 const responseSchema = {

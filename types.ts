@@ -49,6 +49,7 @@ export interface AnalysisInput {
 
 export interface AnalysisConfig {
   systemInstruction?: string;
+  model?: string;
 }
 
 export interface HistoryItem {
