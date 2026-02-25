@@ -5,6 +5,7 @@ import AnalysisDashboard from './components/AnalysisDashboard';
 import ProgressDisplay from './components/ProgressDisplay';
 import HistoryList from './components/HistoryList';
 import PromptSettings from './components/PromptSettings';
+import WarningModal from './components/WarningModal';
 import { AnalysisResult, AnalysisStatus, AnalysisInput, HistoryItem } from './types';
 import { analyzeTranscript, validateDocument } from './geminiService';
 import { EVALUATION_DIMENSIONS_UI } from './constants';
@@ -44,6 +45,10 @@ function App() {
   const [hasAutoPushed, setHasAutoPushed] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
+
+  // Warning Modal State
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
 
   // Simulation logic for progress steps
   useEffect(() => {
@@ -102,11 +107,12 @@ function App() {
     
     if (!validation.isValid) {
       setValidationStatus('failed');
-      // Show failed state for 2 seconds before alert
+      // Show failed state for 2 seconds before modal
       await new Promise(resolve => setTimeout(resolve, 2000));
       setStatus(AnalysisStatus.IDLE);
       setValidationStatus('pending');
-      window.alert(validation.errorMessage || '文档校验失败');
+      setWarningMessage(validation.errorMessage || '文档校验失败');
+      setShowWarningModal(true);
       return;
     }
 
@@ -219,6 +225,14 @@ function App() {
           currentPrompt={customPrompt}
           onPromptChange={setCustomPrompt}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* Warning Modal */}
+      {showWarningModal && (
+        <WarningModal 
+          message={warningMessage}
+          onClose={() => setShowWarningModal(false)}
         />
       )}
 
