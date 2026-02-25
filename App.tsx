@@ -94,16 +94,8 @@ function App() {
     setValidationStatus('pending');
     setCurrentStep(0);
     
-    // Simulate validation step (show animation for at least 1 second)
-    const validationStartTime = Date.now();
-    
-    const validation = validateDocument(input.content);
-    
-    // Ensure validation animation shows for at least 1 second
-    const elapsed = Date.now() - validationStartTime;
-    if (elapsed < 1000) {
-      await new Promise(resolve => setTimeout(resolve, 1000 - elapsed));
-    }
+    // Call LLM to validate document
+    const validation = await validateDocument(input.content);
     
     if (!validation.isValid) {
       setValidationStatus('failed');

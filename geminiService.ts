@@ -60,7 +60,24 @@ const responseSchema = {
   required: ["totalScore", "summary", "executiveSummary", "dimensions", "generalSuggestions", "difficultQuestions", "customerName", "reporterName", "reportSummary", "meetingDate"]
 };
 
-export const validateDocument = (content: string): DocumentValidationResult => {
+const DOCUMENT_VALIDATION_PROMPT = `你是一个文档类型识别专家。请判断以下文本片段是否来自"飞书会议录音转写逐字稿"。
+
+飞书逐字稿的特征包括：
+1. 包含"文字记录"、"关键词"等标题
+2. 包含会议时长信息（如"1小时53分钟"）
+3. 包含说话人名称+时间戳格式（如"张龙虎 00:00"）
+4. 包含多轮对话内容
+
+请返回JSON格式：
+{
+  "isValid": true/false,
+  "reason": "简短说明判断理由"
+}
+
+如果文档是逐字稿，返回 isValid: true
+如果文档是会议纪要、方案文件、PPT文本等非逐字稿，返回 isValid: false`;
+
+export const validateDocument = async (content: string): Promise<DocumentValidationResult> => {
   if (content.length < 200) {
     return {
       isValid: false,
@@ -68,56 +85,72 @@ export const validateDocument = (content: string): DocumentValidationResult => {
     };
   }
 
-  // 飞书逐字稿特征检测
-  // 1. 必须有"文字记录"关键词（支持全角半角）
-  const hasTextRecord = /文\s*字\s*记\s*录/.test(content);
-  
-  // 2. 必须有"关键词"标记（支持全角半角）
-  const hasKeywords = /关\s*键\s*词/.test(content);
-  
-  // 3. 必须有会议时长（如"1小时 53分钟 27秒"，支持全角半角数字和单位）
-  const hasDuration = /[\d０-９]+\s*[小⼩]\s*时|[\d０-９]+\s*分\s*钟|[\d０-９]+\s*秒/.test(content);
-  
-  // 4. 必须有会议日期（如"2026年1月30日"，支持全角半角）
-  const hasMeetingDate = /[\d０-９]{4}\s*年\s*[\d０-９]{1,2}\s*[月⽉]\s*[\d０-９]{1,2}/.test(content);
-  
-  // 5. 必须有说话人+时间戳格式（如"张龙虎 00:00"，支持全角半角冒号）
-  const speakerPattern = /[\u4e00-\u9fa5a-zA-Z]{2,10}\s*[\d０-９]{1,2}[：:][\d０-９]{2}/g;
-  const speakerMatches = content.match(speakerPattern);
-  const speakerCount = speakerMatches ? speakerMatches.length : 0;
-  
-  // 6. 必须有多个时间戳（逐字稿特征，支持全角半角冒号）
-  const timestampPattern = /[\d０-９]{1,2}[：:][\d０-９]{2}/g;
-  const timestampMatches = content.match(timestampPattern);
-  const timestampCount = timestampMatches ? timestampMatches.length : 0;
+  try {
+    // 只读取前2000个字符让LLM判断
+    const textToAnalyze = content.slice(0, 2000);
+    
+    const messages = [
+      {
+        role: "system",
+        content: DOCUMENT_VALIDATION_PROMPT
+      },
+      {
+        role: "user",
+        content: `请判断以下文档片段是否为飞书逐字稿：\n\n${textToAnalyze}`
+      }
+    ];
 
-  // 严格校验：必须满足以下所有条件
-  // 1. 有"文字记录"
-  // 2. 有"关键词"
-  // 3. 有会议时长
-  // 4. 有说话人标识（至少2个）
-  // 5. 有足够的时间戳（至少5个）
-  
-  const checks = {
-    hasTextRecord,
-    hasKeywords,
-    hasDuration,
-    hasSpeaker: speakerCount >= 2,
-    hasTimestamps: timestampCount >= 5
-  };
-  
-  // 必须满足所有条件
-  const isValid = checks.hasTextRecord && checks.hasKeywords && checks.hasDuration && checks.hasSpeaker && checks.hasTimestamps;
-  
-  if (!isValid) {
-    console.log('文档校验失败:', checks);
-    return {
-      isValid: false,
-      errorMessage: "⚠️ 文档类型异常：检测到您上传的似乎是会议纪要或方案文件，而非沟通逐字稿。系统无法在此类文档上执行情绪感知和互动评估。请重新上传带有完整对话上下文和说话人标识的现场录音转写文档（逐字稿）。"
-    };
+    const response = await fetch(`${BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_SECRET_KEY}`
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: messages,
+        temperature: 0.1,
+        max_tokens: 200
+      })
+    });
+
+    if (!response.ok) {
+      console.error("Validation API error:", response.status);
+      // API调用失败时，默认通过，避免阻断用户
+      return { isValid: true };
+    }
+
+    const data = await response.json();
+    let responseText = data.choices[0]?.message?.content || '';
+    
+    // 清理响应
+    if (responseText.startsWith('```json')) {
+      responseText = responseText.slice(7);
+    } else if (responseText.startsWith('```')) {
+      responseText = responseText.slice(3);
+    }
+    if (responseText.endsWith('```')) {
+      responseText = responseText.slice(0, -3);
+    }
+    responseText = responseText.trim();
+
+    const result = JSON.parse(responseText);
+    console.log('文档校验结果:', result);
+
+    if (!result.isValid) {
+      return {
+        isValid: false,
+        errorMessage: "⚠️ 文档类型异常：检测到您上传的似乎是会议纪要或方案文件，而非沟通逐字稿。系统无法在此类文档上执行情绪感知和互动评估。请重新上传带有完整对话上下文和说话人标识的现场录音转写文档（逐字稿）。"
+      };
+    }
+
+    return { isValid: true };
+
+  } catch (error) {
+    console.error("Document validation error:", error);
+    // 出错时默认通过，避免阻断用户
+    return { isValid: true };
   }
-
-  return { isValid: true };
 };
 
 export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisConfig): Promise<AnalysisResult> => {
