@@ -94,18 +94,21 @@ function App() {
     setValidationStatus('pending');
     setCurrentStep(0);
     
-    // Call LLM to validate document
-    const validation = await validateDocument(input.content);
-    
-    if (!validation.isValid) {
-      setValidationStatus('failed');
-      // Show failed state for 2 seconds before modal
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setStatus(AnalysisStatus.IDLE);
-      setValidationStatus('pending');
-      setWarningMessage(validation.errorMessage || '文档校验失败');
-      setShowWarningModal(true);
-      return;
+    // PDF 文件直接通过校验（base64编码无法直接读取文本）
+    // 只有文本类型才需要校验
+    if (input.type === 'text') {
+      const validation = await validateDocument(input.content);
+      
+      if (!validation.isValid) {
+        setValidationStatus('failed');
+        // Show failed state for 2 seconds before modal
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setStatus(AnalysisStatus.IDLE);
+        setValidationStatus('pending');
+        setWarningMessage(validation.errorMessage || '文档校验失败');
+        setShowWarningModal(true);
+        return;
+      }
     }
 
     setValidationStatus('passed');
