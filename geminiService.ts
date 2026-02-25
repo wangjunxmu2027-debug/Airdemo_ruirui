@@ -120,8 +120,8 @@ export const validateDocument = async (content: string): Promise<DocumentValidat
       body: JSON.stringify({
         model: MODEL,
         messages: messages,
-        temperature: 0.1,
-        max_tokens: 100
+        temperature: 0,
+        max_tokens: 50
       })
     });
 
@@ -163,12 +163,21 @@ export const validateDocument = async (content: string): Promise<DocumentValidat
         result = { isValid: isValidMatch[1] === 'true' };
         console.log('从文本中提取isValid:', result);
       } else {
-        // 无法解析，默认拒绝
-        console.log('无法解析LLM响应，默认拒绝');
-        return {
-          isValid: false,
-          errorMessage: "⚠️ 文档类型异常：检测到您上传的似乎是会议纪要或方案文件，而非沟通逐字稿。系统无法在此类文档上执行情绪感知和互动评估。请重新上传带有完整对话上下文和说话人标识的现场录音转写文档（逐字稿）。"
-        };
+        // 尝试匹配 true 或 false
+        if (responseText.includes('true')) {
+          result = { isValid: true };
+          console.log('从文本中检测到true');
+        } else if (responseText.includes('false')) {
+          result = { isValid: false };
+          console.log('从文本中检测到false');
+        } else {
+          // 无法解析，默认拒绝
+          console.log('无法解析LLM响应，默认拒绝');
+          return {
+            isValid: false,
+            errorMessage: "⚠️ 文档类型异常：检测到您上传的似乎是会议纪要或方案文件，而非沟通逐字稿。系统无法在此类文档上执行情绪感知和互动评估。请重新上传带有完整对话上下文和说话人标识的现场录音转写文档（逐字稿）。"
+          };
+        }
       }
     }
     console.log('解析后的结果:', result);
