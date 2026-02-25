@@ -69,25 +69,25 @@ export const validateDocument = (content: string): DocumentValidationResult => {
   }
 
   // 飞书逐字稿特征检测
-  // 1. 必须有"文字记录"关键词
-  const hasTextRecord = /文字记录/.test(content);
+  // 1. 必须有"文字记录"关键词（支持全角半角）
+  const hasTextRecord = /文\s*字\s*记\s*录/.test(content);
   
-  // 2. 必须有"关键词"标记
-  const hasKeywords = /关键词/.test(content);
+  // 2. 必须有"关键词"标记（支持全角半角）
+  const hasKeywords = /关\s*键\s*词/.test(content);
   
-  // 3. 必须有会议时长（如"1小时 53分钟 27秒"或"1⼩时 53分钟 27秒"）
-  const hasDuration = /\d+\s*[小⼩]时|\d+\s*分钟|\d+\s*秒/.test(content);
+  // 3. 必须有会议时长（如"1小时 53分钟 27秒"，支持全角半角数字和单位）
+  const hasDuration = /[\d０-９]+\s*[小⼩]\s*时|[\d０-９]+\s*分\s*钟|[\d０-９]+\s*秒/.test(content);
   
-  // 4. 必须有会议日期（如"2026年1月30日"）
-  const hasMeetingDate = /\d{4}\s*年\s*\d{1,2}\s*[月⽉]\s*\d{1,2}\s*[日⽇]?/.test(content);
+  // 4. 必须有会议日期（如"2026年1月30日"，支持全角半角）
+  const hasMeetingDate = /[\d０-９]{4}\s*年\s*[\d０-９]{1,2}\s*[月⽉]\s*[\d０-９]{1,2}/.test(content);
   
-  // 5. 必须有说话人+时间戳格式（如"张龙虎 00:00"）
-  const speakerPattern = /[\u4e00-\u9fa5a-zA-Z]{2,10}\s*\d{1,2}:\d{2}/g;
+  // 5. 必须有说话人+时间戳格式（如"张龙虎 00:00"，支持全角半角冒号）
+  const speakerPattern = /[\u4e00-\u9fa5a-zA-Z]{2,10}\s*[\d０-９]{1,2}[：:][\d０-９]{2}/g;
   const speakerMatches = content.match(speakerPattern);
   const speakerCount = speakerMatches ? speakerMatches.length : 0;
   
-  // 6. 必须有多个时间戳（逐字稿特征）
-  const timestampPattern = /\d{1,2}:\d{2}/g;
+  // 6. 必须有多个时间戳（逐字稿特征，支持全角半角冒号）
+  const timestampPattern = /[\d０-９]{1,2}[：:][\d０-９]{2}/g;
   const timestampMatches = content.match(timestampPattern);
   const timestampCount = timestampMatches ? timestampMatches.length : 0;
 
