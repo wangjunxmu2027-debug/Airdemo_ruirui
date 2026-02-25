@@ -89,8 +89,8 @@ function App() {
     try {
       const validation = validateDocument(input.content);
       if (!validation.isValid) {
-        setStatus(AnalysisStatus.ERROR);
-        setErrorMsg(validation.errorMessage || '文档校验失败');
+        setStatus(AnalysisStatus.IDLE);
+        window.alert(validation.errorMessage || '文档校验失败');
         return;
       }
 
