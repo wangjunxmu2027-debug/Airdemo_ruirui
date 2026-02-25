@@ -86,8 +86,8 @@ export const validateDocument = async (content: string): Promise<DocumentValidat
   }
 
   try {
-    // 只读取前2000个字符让LLM判断
-    const textToAnalyze = content.slice(0, 2000);
+    // 只读取前200个字符让LLM判断
+    const textToAnalyze = content.slice(0, 200);
     
     const messages = [
       {
