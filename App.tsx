@@ -25,6 +25,7 @@ function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [validationStatus, setValidationStatus] = useState<'pending' | 'passed' | 'failed'>('pending');
   
   // Navigation State
   const [view, setView] = useState<'home' | 'history'>('home');
@@ -48,11 +49,11 @@ function App() {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     
-    if (status === AnalysisStatus.ANALYZING) {
-      setCurrentStep(0);
+    if (status === AnalysisStatus.ANALYZING && validationStatus === 'passed') {
+      setCurrentStep(1); // Start from step 1 (validation is step 0)
       interval = setInterval(() => {
         setCurrentStep(prev => {
-          if (prev < EVALUATION_DIMENSIONS_UI.length) {
+          if (prev < EVALUATION_DIMENSIONS_UI.length + 1) {
             return prev + 1;
           }
           return prev;
@@ -61,7 +62,7 @@ function App() {
     }
 
     return () => clearInterval(interval);
-  }, [status]);
+  }, [status, validationStatus]);
 
   // Auto Push to Feishu when Analysis is Complete
   useEffect(() => {
@@ -85,15 +86,33 @@ function App() {
     setErrorMsg(null);
     setCurrentTitle(input.title || '未命名分析');
     setHasAutoPushed(false);
+    setValidationStatus('pending');
+    setCurrentStep(0);
     
-    try {
-      const validation = validateDocument(input.content);
-      if (!validation.isValid) {
-        setStatus(AnalysisStatus.IDLE);
-        window.alert(validation.errorMessage || '文档校验失败');
-        return;
-      }
+    // Simulate validation step (show animation for at least 1 second)
+    const validationStartTime = Date.now();
+    
+    const validation = validateDocument(input.content);
+    
+    // Ensure validation animation shows for at least 1 second
+    const elapsed = Date.now() - validationStartTime;
+    if (elapsed < 1000) {
+      await new Promise(resolve => setTimeout(resolve, 1000 - elapsed));
+    }
+    
+    if (!validation.isValid) {
+      setValidationStatus('failed');
+      // Show failed state for 2 seconds before alert
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setStatus(AnalysisStatus.IDLE);
+      setValidationStatus('pending');
+      window.alert(validation.errorMessage || '文档校验失败');
+      return;
+    }
 
+    setValidationStatus('passed');
+
+    try {
       const data = await analyzeTranscript(input, {
         systemInstruction: customPrompt || undefined
       });
@@ -183,6 +202,7 @@ function App() {
     setResult(null);
     setErrorMsg(null);
     setCurrentStep(0);
+    setValidationStatus('pending');
     setView('home');
   };
 
@@ -322,7 +342,7 @@ function App() {
               )}
 
               {status === AnalysisStatus.ANALYZING && (
-                 <ProgressDisplay currentStep={currentStep} />
+                 <ProgressDisplay currentStep={currentStep} validationStatus={validationStatus} />
               )}
               
               {/* Error Message */}

@@ -107,6 +107,13 @@ Please extract the following information from the transcript context with high p
 The dimension names in the JSON should correspond to the Chinese titles (e.g., "价值传递清晰度", "行业与场景贴合度").
 `;
 
+export const DOCUMENT_VALIDATION_STEP = {
+  id: 0,
+  title: "文档类型校验",
+  desc: "检测上传文档是否为合格的录音转写逐字稿。",
+  weight: "前置检查"
+};
+
 export const EVALUATION_DIMENSIONS_UI = [
   {
     id: 1,
