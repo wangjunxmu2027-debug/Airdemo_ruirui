@@ -60,22 +60,28 @@ const responseSchema = {
   required: ["totalScore", "summary", "executiveSummary", "dimensions", "generalSuggestions", "difficultQuestions", "customerName", "reporterName", "reportSummary", "meetingDate"]
 };
 
-const DOCUMENT_VALIDATION_PROMPT = `你是一个文档类型识别专家。请判断以下文本片段是否来自"飞书会议录音转写逐字稿"。
+const DOCUMENT_VALIDATION_PROMPT = `你是一个文档类型识别专家。请严格判断以下文本片段是否来自"飞书会议录音转写逐字稿"。
 
-飞书逐字稿的特征包括：
-1. 包含"文字记录"、"关键词"等标题
-2. 包含会议时长信息（如"1小时53分钟"）
-3. 包含说话人名称+时间戳格式（如"张龙虎 00:00"）
-4. 包含多轮对话内容
+【飞书逐字稿的必须特征】（必须同时满足以下所有条件才算合格）：
+1. 必须包含"文字记录"或"⽂字记录"标题
+2. 必须包含"关键词"或"关键词"标记
+3. 必须包含会议时长格式（如"1小时53分钟"、"1⼩时53分钟"）
+4. 必须包含说话人名称+时间戳格式（如"张龙虎 00:00"、"张龙虎 00:00"）
 
-请返回JSON格式：
+【非逐字稿特征】（出现以下任一情况应拒绝）：
+- 纯文本段落，没有说话人标识
+- 会议纪要、摘要形式
+- 方案文档、PPT文本
+- 产品介绍、宣传材料
+- 企业内部通知、公告
+
+请返回严格的JSON格式：
 {
   "isValid": true/false,
   "reason": "简短说明判断理由"
 }
 
-如果文档是逐字稿，返回 isValid: true
-如果文档是会议纪要、方案文件、PPT文本等非逐字稿，返回 isValid: false`;
+注意：只有确认为飞书逐字稿格式才返回 isValid: true，否则返回 false`;
 
 export const validateDocument = async (content: string): Promise<DocumentValidationResult> => {
   if (content.length < 200) {
