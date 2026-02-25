@@ -68,22 +68,41 @@ export const validateDocument = (content: string): DocumentValidationResult => {
     };
   }
 
+  // 飞书逐字稿特征检测
   const hasFeishuFeatures = /文字记录|关键词/.test(content);
   
-  const speakerPattern = /[\u4e00-\u9fa5a-zA-Z]{2,10}\s+\d{1,2}:\d{2}/g;
+  // 检测说话人标识模式 (人名 + 时间戳，如 "张龙虎 00:00" 或 "张龙虎00:00")
+  const speakerPattern = /[\u4e00-\u9fa5a-zA-Z]{2,10}\s*\d{1,2}:\d{2}/g;
   const speakerMatches = content.match(speakerPattern);
   
+  // 检测时间戳模式
   const timestampPattern = /\d{1,2}:\d{2}/g;
   const timestampMatches = content.match(timestampPattern);
+
+  // 检测对话内容（中文句子）
+  const hasDialogue = /[，。？！、]/.test(content) && content.length > 500;
 
   const speakerCount = speakerMatches ? speakerMatches.length : 0;
   const timestampCount = timestampMatches ? timestampMatches.length : 0;
 
-  if (hasFeishuFeatures && speakerCount >= 2) {
+  // 放宽条件：满足以下任一即为合格
+  // 1. 有飞书特征 + 有时间戳
+  // 2. 有说话人标识
+  // 3. 有足够的时间戳 + 有对话内容
+  // 4. 文档足够长（超过2000字）
+  if (hasFeishuFeatures && timestampCount >= 1) {
     return { isValid: true };
   }
 
-  if (speakerCount >= 3 && timestampCount >= 3) {
+  if (speakerCount >= 1) {
+    return { isValid: true };
+  }
+
+  if (timestampCount >= 5 && hasDialogue) {
+    return { isValid: true };
+  }
+
+  if (content.length > 2000) {
     return { isValid: true };
   }
 
