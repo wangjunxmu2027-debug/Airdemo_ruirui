@@ -14,6 +14,7 @@ import { createBitableRecord } from './bitableService';
 import { extractMeetingDateFromText } from './utils';
 import { captureScreenshot } from './screenshotUtils';
 import ReportView from './components/ReportView';
+import { extractTextFromPdfBase64 } from './pdfUtils';
 
 function App() {
   // Simple routing for report view
@@ -94,10 +95,19 @@ function App() {
     setValidationStatus('pending');
     setCurrentStep(0);
     
-    // PDF 文件直接通过校验（base64编码无法直接读取文本）
-    // 只有文本类型才需要校验
-    if (input.type === 'text') {
-      const validation = await validateDocument(input.content);
+    // PDF 文件需要提取文本进行校验
+    // 文本类型直接校验
+    let textToValidate: string | null = null;
+    
+    if (input.type === 'pdf') {
+      // 从 PDF 提取文本进行校验
+      textToValidate = await extractTextFromPdfBase64(input.content);
+    } else {
+      textToValidate = input.content;
+    }
+    
+    if (textToValidate) {
+      const validation = await validateDocument(textToValidate);
       
       if (!validation.isValid) {
         setValidationStatus('failed');
