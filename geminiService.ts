@@ -69,47 +69,55 @@ export const validateDocument = (content: string): DocumentValidationResult => {
   }
 
   // 飞书逐字稿特征检测
-  const hasFeishuFeatures = /文字记录|关键词/.test(content);
+  // 1. 必须有"文字记录"关键词
+  const hasTextRecord = /文字记录/.test(content);
   
-  // 检测说话人标识模式 (人名 + 时间戳，如 "张龙虎 00:00" 或 "张龙虎00:00")
+  // 2. 必须有"关键词"标记
+  const hasKeywords = /关键词/.test(content);
+  
+  // 3. 必须有会议时长（如"1小时 53分钟 27秒"或"1⼩时 53分钟 27秒"）
+  const hasDuration = /\d+\s*[小⼩]时|\d+\s*分钟|\d+\s*秒/.test(content);
+  
+  // 4. 必须有会议日期（如"2026年1月30日"）
+  const hasMeetingDate = /\d{4}\s*年\s*\d{1,2}\s*[月⽉]\s*\d{1,2}\s*[日⽇]?/.test(content);
+  
+  // 5. 必须有说话人+时间戳格式（如"张龙虎 00:00"）
   const speakerPattern = /[\u4e00-\u9fa5a-zA-Z]{2,10}\s*\d{1,2}:\d{2}/g;
   const speakerMatches = content.match(speakerPattern);
+  const speakerCount = speakerMatches ? speakerMatches.length : 0;
   
-  // 检测时间戳模式
+  // 6. 必须有多个时间戳（逐字稿特征）
   const timestampPattern = /\d{1,2}:\d{2}/g;
   const timestampMatches = content.match(timestampPattern);
-
-  // 检测对话内容（中文句子）
-  const hasDialogue = /[，。？！、]/.test(content) && content.length > 500;
-
-  const speakerCount = speakerMatches ? speakerMatches.length : 0;
   const timestampCount = timestampMatches ? timestampMatches.length : 0;
 
-  // 放宽条件：满足以下任一即为合格
-  // 1. 有飞书特征 + 有时间戳
-  // 2. 有说话人标识
-  // 3. 有足够的时间戳 + 有对话内容
-  // 4. 文档足够长（超过2000字）
-  if (hasFeishuFeatures && timestampCount >= 1) {
-    return { isValid: true };
-  }
-
-  if (speakerCount >= 1) {
-    return { isValid: true };
-  }
-
-  if (timestampCount >= 5 && hasDialogue) {
-    return { isValid: true };
-  }
-
-  if (content.length > 2000) {
-    return { isValid: true };
-  }
-
-  return {
-    isValid: false,
-    errorMessage: "⚠️ 文档类型异常：检测到您上传的似乎是会议纪要或方案文件，而非沟通逐字稿。系统无法在此类文档上执行情绪感知和互动评估。请重新上传带有完整对话上下文和说话人标识的现场录音转写文档（逐字稿）。"
+  // 严格校验：必须满足以下所有条件
+  // 1. 有"文字记录"
+  // 2. 有"关键词"
+  // 3. 有会议时长
+  // 4. 有说话人标识（至少2个）
+  // 5. 有足够的时间戳（至少5个）
+  
+  const checks = {
+    hasTextRecord,
+    hasKeywords,
+    hasDuration,
+    hasSpeaker: speakerCount >= 2,
+    hasTimestamps: timestampCount >= 5
   };
+  
+  // 必须满足所有条件
+  const isValid = checks.hasTextRecord && checks.hasKeywords && checks.hasDuration && checks.hasSpeaker && checks.hasTimestamps;
+  
+  if (!isValid) {
+    console.log('文档校验失败:', checks);
+    return {
+      isValid: false,
+      errorMessage: "⚠️ 文档类型异常：检测到您上传的似乎是会议纪要或方案文件，而非沟通逐字稿。系统无法在此类文档上执行情绪感知和互动评估。请重新上传带有完整对话上下文和说话人标识的现场录音转写文档（逐字稿）。"
+    };
+  }
+
+  return { isValid: true };
 };
 
 export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisConfig): Promise<AnalysisResult> => {
