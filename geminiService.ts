@@ -1,6 +1,6 @@
 
 import { QA_CRITERIA_PROMPT } from "./constants";
-import { AnalysisResult, AnalysisInput, AnalysisConfig } from "./types";
+import { AnalysisResult, AnalysisInput, AnalysisConfig, DocumentValidationResult } from "./types";
 
 // API 配置 - 请在 .env.local 文件中设置 API_KEY 和 BASE_URL
 const API_SECRET_KEY = process.env.API_KEY || "";
@@ -58,6 +58,39 @@ const responseSchema = {
     generalSuggestions: { type: "string", description: "Overall supplementary advice for the pre-sales consultant." }
   },
   required: ["totalScore", "summary", "executiveSummary", "dimensions", "generalSuggestions", "difficultQuestions", "customerName", "reporterName", "reportSummary", "meetingDate"]
+};
+
+export const validateDocument = (content: string): DocumentValidationResult => {
+  if (content.length < 200) {
+    return {
+      isValid: false,
+      errorMessage: "⚠️ 文档类型异常：检测到您上传的似乎是会议纪要或方案文件，而非沟通逐字稿。系统无法在此类文档上执行情绪感知和互动评估。请重新上传带有完整对话上下文和说话人标识的现场录音转写文档（逐字稿）。"
+    };
+  }
+
+  const hasFeishuFeatures = /文字记录|关键词/.test(content);
+  
+  const speakerPattern = /[\u4e00-\u9fa5a-zA-Z]{2,10}\s+\d{1,2}:\d{2}/g;
+  const speakerMatches = content.match(speakerPattern);
+  
+  const timestampPattern = /\d{1,2}:\d{2}/g;
+  const timestampMatches = content.match(timestampPattern);
+
+  const speakerCount = speakerMatches ? speakerMatches.length : 0;
+  const timestampCount = timestampMatches ? timestampMatches.length : 0;
+
+  if (hasFeishuFeatures && speakerCount >= 2) {
+    return { isValid: true };
+  }
+
+  if (speakerCount >= 3 && timestampCount >= 3) {
+    return { isValid: true };
+  }
+
+  return {
+    isValid: false,
+    errorMessage: "⚠️ 文档类型异常：检测到您上传的似乎是会议纪要或方案文件，而非沟通逐字稿。系统无法在此类文档上执行情绪感知和互动评估。请重新上传带有完整对话上下文和说话人标识的现场录音转写文档（逐字稿）。"
+  };
 };
 
 export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisConfig): Promise<AnalysisResult> => {

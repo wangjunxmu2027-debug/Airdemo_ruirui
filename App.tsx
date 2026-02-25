@@ -6,7 +6,7 @@ import ProgressDisplay from './components/ProgressDisplay';
 import HistoryList from './components/HistoryList';
 import PromptSettings from './components/PromptSettings';
 import { AnalysisResult, AnalysisStatus, AnalysisInput, HistoryItem } from './types';
-import { analyzeTranscript } from './geminiService';
+import { analyzeTranscript, validateDocument } from './geminiService';
 import { EVALUATION_DIMENSIONS_UI } from './constants';
 import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
 import { createBitableRecord } from './bitableService';
@@ -84,9 +84,16 @@ function App() {
     setStatus(AnalysisStatus.ANALYZING);
     setErrorMsg(null);
     setCurrentTitle(input.title || '未命名分析');
-    setHasAutoPushed(false); // Reset auto-push state
+    setHasAutoPushed(false);
     
     try {
+      const validation = validateDocument(input.content);
+      if (!validation.isValid) {
+        setStatus(AnalysisStatus.ERROR);
+        setErrorMsg(validation.errorMessage || '文档校验失败');
+        return;
+      }
+
       const data = await analyzeTranscript(input, {
         systemInstruction: customPrompt || undefined
       });

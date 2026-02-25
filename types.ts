@@ -51,6 +51,11 @@ export interface AnalysisConfig {
   systemInstruction?: string;
 }
 
+export interface DocumentValidationResult {
+  isValid: boolean;
+  errorMessage?: string;
+}
+
 export interface HistoryItem {
   id: string;
   timestamp: number;
