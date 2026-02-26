@@ -7,14 +7,13 @@ import HistoryList from './components/HistoryList';
 import PromptSettings from './components/PromptSettings';
 import WarningModal from './components/WarningModal';
 import { AnalysisResult, AnalysisStatus, AnalysisInput, HistoryItem } from './types';
-import { analyzeTranscript, validateDocument } from './geminiService';
+import { analyzeTranscript } from './geminiService';
 import { EVALUATION_DIMENSIONS_UI } from './constants';
 import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
 import { createBitableRecord } from './bitableService';
 import { extractMeetingDateFromText } from './utils';
 import { captureScreenshot } from './screenshotUtils';
 import ReportView from './components/ReportView';
-import { extractTextFromPdfBase64 } from './pdfUtils';
 
 function App() {
   // Simple routing for report view
@@ -92,38 +91,11 @@ function App() {
     setErrorMsg(null);
     setCurrentTitle(input.title || '未命名分析');
     setHasAutoPushed(false);
-    setValidationStatus('pending');
+    setValidationStatus('pending'); // 开始校验
     setCurrentStep(0);
     
-    // PDF 文件需要提取文本进行校验
-    // 文本类型直接校验
-    let textToValidate: string | null = null;
-    
-    if (input.type === 'pdf') {
-      // 从 PDF 提取文本进行校验
-      textToValidate = await extractTextFromPdfBase64(input.content);
-    } else {
-      textToValidate = input.content;
-    }
-    
-    if (textToValidate) {
-      const validation = await validateDocument(textToValidate);
-      
-      if (!validation.isValid) {
-        setValidationStatus('failed');
-        // Show failed state for 2 seconds before modal
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setStatus(AnalysisStatus.IDLE);
-        setValidationStatus('pending');
-        setWarningMessage(validation.errorMessage || '文档校验失败');
-        setShowWarningModal(true);
-        return;
-      }
-    }
-
-    setValidationStatus('passed');
-
     try {
+      // 先尝试分析，其中包含文档校验逻辑
       const data = await analyzeTranscript(input, {
         systemInstruction: customPrompt || undefined
       });
@@ -131,6 +103,12 @@ function App() {
       if (meetingDate) {
         data.meetingDate = meetingDate;
       }
+      // 如果成功通过校验，设置验证状态为通过
+      setValidationStatus('passed');
+      // 等待动画完成校验步骤
+      await new Promise(resolve => setTimeout(resolve, 3500)); // 等待一个步骤的时间
+      setCurrentStep(1); // 进入下一个步骤
+      
       setResult(data);
       setStatus(AnalysisStatus.COMPLETE);
       
@@ -141,8 +119,21 @@ function App() {
       // Auto-save removed to allow screenshot
     } catch (err: any) {
       console.error(err);
-      setStatus(AnalysisStatus.ERROR);
-      setErrorMsg(err.message || "分析失败，请检查API Key或文件格式后重试。");
+      if (err.message && err.message.includes('Invalid document format')) {
+        // 如果是文档格式错误，立即设置校验失败状态
+        setValidationStatus('failed');
+        // 让加载动画显示校验失败
+        setCurrentStep(0); // 保持在校验步骤
+        // Show failed state for 2 seconds before modal
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setStatus(AnalysisStatus.IDLE);
+        setValidationStatus('pending');
+        setWarningMessage("⚠️ 文档类型异常：检测到您上传的似乎是会议纪要或方案文件，而非沟通逐字稿。系统无法在此类文档上执行情绪感知和互动评估。请重新上传带有完整对话上下文和说话人标识的现场录音转写文档（逐字稿）。");
+        setShowWarningModal(true);
+      } else {
+        setStatus(AnalysisStatus.ERROR);
+        setErrorMsg(err.message || "分析失败，请检查API Key或文件格式后重试。");
+      }
     }
   };
 

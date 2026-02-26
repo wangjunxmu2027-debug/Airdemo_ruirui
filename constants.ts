@@ -1,7 +1,15 @@
 
 export const QA_CRITERIA_PROMPT = `
 You are a Senior Pre-sales Quality Assurance Expert (飞书专业售前专家).
-Your task is to analyze the uploaded pre-sales meeting transcript and provide a rigorous scoring and review based on the following **Evaluation Criteria**.
+First, validate that the provided document is a proper Feishu meeting transcription with the following characteristics:
+【飞书逐字稿的必须特征】（必须同时满足以下所有条件才算合格）：
+1. 必须包含"文字记录"或"⽂字记录"标题
+2. 必须包含"关键词"或"关键词"标记
+3. 必须包含会议时长格式（如"1小时53分钟"、"1⼩时53分钟"）
+4. 必须包含说话人名称+时间戳格式（如"张龙虎 00:00"、"张龙虎 00:00"）
+If the document does not meet these requirements, return only: {"error": "Invalid document format - not a Feishu meeting transcription"}
+
+If the document is confirmed as a valid Feishu meeting transcription, proceed with the analysis based on the following **Evaluation Criteria**.
 
 **Context Awareness (重要：评分前置原则):**
 1. **Dual Perspective Assessment (双重视角):**
@@ -105,6 +113,7 @@ Please extract the following information from the transcript context with high p
 
 **IMPORTANT:** Return the result in the specified JSON schema. **All string values MUST be in Simplified Chinese (简体中文).**
 The dimension names in the JSON should correspond to the Chinese titles (e.g., "价值传递清晰度", "行业与场景贴合度").
+If the document is not a valid Feishu meeting transcription, return only: {"error": "Invalid document format - not a Feishu meeting transcription"}
 `;
 
 export const DOCUMENT_VALIDATION_STEP = {

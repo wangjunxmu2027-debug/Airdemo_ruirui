@@ -121,7 +121,10 @@ export const validateDocument = async (content: string): Promise<DocumentValidat
         model: MODEL,
         messages: messages,
         temperature: 0,
-        max_tokens: 50
+        max_tokens: 100,
+        response_format: {
+          type: "json_object"
+        }
       })
     });
 
@@ -137,7 +140,11 @@ export const validateDocument = async (content: string): Promise<DocumentValidat
 
     const data = await response.json();
     console.log('API 响应数据:', data);
-    let responseText = data.choices[0]?.message?.content || '';
+    console.log('choices:', data.choices);
+    console.log('choices[0]:', data.choices?.[0]);
+    console.log('message:', data.choices?.[0]?.message);
+    
+    let responseText = data.choices?.[0]?.message?.content || '';
     console.log('LLM 原始响应:', responseText);
     
     // 清理响应
@@ -296,6 +303,12 @@ ${JSON.stringify(responseSchema, null, 2)}
       content = content.slice(0, -3);
     }
     content = content.trim();
+
+    // Check if the response contains an error message about invalid document format
+    if (content.includes('"error"') && content.includes('Invalid document format')) {
+      const parsedError = JSON.parse(content);
+      throw new Error(parsedError.error);
+    }
 
     return JSON.parse(content) as AnalysisResult;
 

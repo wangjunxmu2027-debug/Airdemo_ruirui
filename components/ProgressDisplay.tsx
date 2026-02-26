@@ -7,8 +7,8 @@ interface Props {
 }
 
 const ProgressDisplay: React.FC<Props> = ({ currentStep, validationStatus = 'pending' }) => {
-  const isValidationStep = currentStep === 0;
-  const validationDone = currentStep > 0 || validationStatus === 'passed';
+  const isValidationStep = currentStep === 0 && validationStatus === 'pending';
+  const validationDone = validationStatus === 'passed';
   const validationFailed = validationStatus === 'failed';
 
   return (
