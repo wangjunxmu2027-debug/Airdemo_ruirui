@@ -11,5 +11,6 @@ export const BITABLE_FIELDS = {
   SUMMARY: '给谁汇报了什么',
   SCREENSHOT: 'AI复盘截屏',
   SCORE: '汇报评分',
-  REPORT_LINK: '报告链接'
+  REPORT_LINK: '报告链接',
+  TRANSCRIPT_LINK: '逐字稿链接'
 };

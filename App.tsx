@@ -13,6 +13,7 @@ import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
 import { createBitableRecord } from './bitableService';
 import { extractMeetingDateFromText } from './utils';
 import { captureScreenshot } from './screenshotUtils';
+import { uploadTranscript } from './storageService';
 import ReportView from './components/ReportView';
 
 function App() {
@@ -49,6 +50,9 @@ function App() {
   // Warning Modal State
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
+  
+  // Current Input State (for transcript upload)
+  const [currentInput, setCurrentInput] = useState<AnalysisInput | null>(null);
 
   // Simulation logic for progress steps
   useEffect(() => {
@@ -93,6 +97,7 @@ function App() {
     setHasAutoPushed(false);
     setValidationStatus('pending'); // 开始校验
     setCurrentStep(0);
+    setCurrentInput(input); // 保存当前输入用于后续上传逐字稿
     
     try {
       // 先尝试分析，其中包含文档校验逻辑
@@ -167,12 +172,29 @@ function App() {
     if (!result) return;
     setIsPushing(true);
     try {
-        // 直接创建记录，链接由 Edge Function 生成并填充到截图字段
+        let transcriptLink = '';
+        
+        if (currentInput) {
+          try {
+            const fileName = currentTitle || '逐字稿';
+            const uploadResult = await uploadTranscript(
+              currentInput.content,
+              fileName,
+              currentInput.type
+            );
+            transcriptLink = uploadResult.publicUrl;
+            console.log("✅ Transcript uploaded successfully:", transcriptLink);
+          } catch (uploadError) {
+            console.error("Transcript upload failed:", uploadError);
+          }
+        }
+        
         const { recordId, reportLink } = await createBitableRecord(
           result,
           currentTitle,
           '售前顾问',
-          '' // 占位，后端会注入真实链接
+          '',
+          transcriptLink
         );
         setBitableRecordId(recordId);
         setShareLink(reportLink);
