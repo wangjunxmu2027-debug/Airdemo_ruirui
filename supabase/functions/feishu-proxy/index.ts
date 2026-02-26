@@ -134,7 +134,7 @@ serve(async (req) => {
     // 新的路由：保存报告并触发 Webhook
     if (path === "/feishu-proxy/save-and-webhook" && req.method === "POST") {
       const body = await req.json();
-      const { webhookUrl, reportData, originalData, appUrl } = body;
+      const { webhookUrl, reportData, originalData, appUrl, transcriptPayload } = body;
 
       if (!reportData || !webhookUrl) {
         return new Response(JSON.stringify({ error: "Missing reportData or webhookUrl" }), {
@@ -176,11 +176,57 @@ serve(async (req) => {
 
       console.log("Generated Short Link:", shortLink);
 
+      let transcriptLink = reportData["逐字稿链接"];
+      if (transcriptPayload?.content) {
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+        const adminSupabase = createClient(supabaseUrl, serviceKey);
+        const timestamp = Date.now();
+        const safeFilename = (transcriptPayload.filename || 'transcript').replace(/[\\/:*?"<>|]/g, '_');
+        const extension = transcriptPayload.fileType === 'pdf' ? 'pdf' : 'txt';
+        const storagePath = `${timestamp}_${safeFilename}.${extension}`;
+
+        let binaryData: Uint8Array;
+        let contentType: string;
+
+        if (transcriptPayload.fileType === 'pdf') {
+          binaryData = decode(transcriptPayload.content);
+          contentType = 'application/pdf';
+        } else {
+          const encoder = new TextEncoder();
+          binaryData = encoder.encode(transcriptPayload.content);
+          contentType = 'text/plain; charset=utf-8';
+        }
+
+        const { error: uploadError } = await adminSupabase
+          .storage
+          .from('transcripts')
+          .upload(storagePath, binaryData, {
+            contentType: contentType,
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error("Transcript upload error:", uploadError);
+          return new Response(JSON.stringify({ error: "Transcript upload failed: " + uploadError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { data: { publicUrl } } = adminSupabase
+          .storage
+          .from('transcripts')
+          .getPublicUrl(storagePath);
+
+        transcriptLink = publicUrl;
+      }
+
       // 2. 更新 reportData 中的链接字段
       const webhookPayload = {
         ...reportData,
         "报告链接": shortLink,
-        "AI复盘截屏": shortLink // 将报告链接填入截图字段
+        "AI复盘截屏": shortLink,
+        "逐字稿链接": transcriptLink || ""
       };
 
       // 3. 发送 Webhook

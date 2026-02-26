@@ -13,7 +13,6 @@ import { saveHistoryItem, getHistory, deleteHistoryItem } from './storage';
 import { createBitableRecord } from './bitableService';
 import { extractMeetingDateFromText } from './utils';
 import { captureScreenshot } from './screenshotUtils';
-import { uploadTranscript } from './storageService';
 import ReportView from './components/ReportView';
 
 function App() {
@@ -172,39 +171,20 @@ function App() {
     if (!result) return;
     setIsPushing(true);
     try {
-        let transcriptLink = '';
-        
-        console.log("Current input:", currentInput ? "exists" : "null");
-        
-        if (currentInput) {
-          try {
-            const fileName = currentTitle || '逐字稿';
-            console.log("Uploading transcript:", { fileName, fileType: currentInput.type, contentLength: currentInput.content.length });
-            
-            const uploadResult = await uploadTranscript(
-              currentInput.content,
-              fileName,
-              currentInput.type
-            );
-            transcriptLink = uploadResult.publicUrl;
-            console.log("✅ Transcript uploaded successfully:", transcriptLink);
-          } catch (uploadError: any) {
-            console.error("Transcript upload failed:", uploadError?.message || uploadError);
-          }
-        } else {
-          console.warn("No currentInput available for upload");
-        }
-        
         const { recordId, reportLink } = await createBitableRecord(
           result,
           currentTitle,
           '售前顾问',
           '',
-          transcriptLink
+          currentInput ? {
+            content: currentInput.content,
+            filename: currentTitle || '逐字稿',
+            fileType: currentInput.type
+          } : undefined
         );
         setBitableRecordId(recordId);
         setShareLink(reportLink);
-        console.log("✅ Auto-pushed to Feishu successfully with transcript:", transcriptLink);
+        console.log("✅ Auto-pushed to Feishu successfully");
     } catch (e: any) {
         console.error("Auto-push failed:", e);
     } finally {

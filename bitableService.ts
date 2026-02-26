@@ -41,7 +41,7 @@ export const createBitableRecord = async (
   title: string,
   analyst: string = '未知',
   screenshotUrl: string = '',
-  transcriptLink: string = ''
+  transcriptPayload?: { content: string; filename: string; fileType: 'text' | 'pdf' }
 ): Promise<{ recordId: string; reportLink: string }> => {
   if (!FEISHU_CONFIG.webhookUrl) {
     throw new Error('未配置飞书 Webhook URL');
@@ -68,7 +68,7 @@ export const createBitableRecord = async (
       [BITABLE_FIELDS.SUMMARY]: summary,
       [BITABLE_FIELDS.SCREENSHOT]: screenshotUrl,
       [BITABLE_FIELDS.SCORE]: analysisResult.totalScore,
-      [BITABLE_FIELDS.TRANSCRIPT_LINK]: transcriptLink,
+      [BITABLE_FIELDS.TRANSCRIPT_LINK]: '',
       // 报告链接字段在 Edge Function 中生成并填充
     };
 
@@ -80,7 +80,8 @@ export const createBitableRecord = async (
         webhookUrl: FEISHU_CONFIG.webhookUrl,
         reportData: reportData,
         originalData: analysisResult,
-        appUrl: appUrl
+        appUrl: appUrl,
+        transcriptPayload: transcriptPayload
       }
     });
 
