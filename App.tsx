@@ -174,9 +174,13 @@ function App() {
     try {
         let transcriptLink = '';
         
+        console.log("Current input:", currentInput ? "exists" : "null");
+        
         if (currentInput) {
           try {
             const fileName = currentTitle || '逐字稿';
+            console.log("Uploading transcript:", { fileName, fileType: currentInput.type, contentLength: currentInput.content.length });
+            
             const uploadResult = await uploadTranscript(
               currentInput.content,
               fileName,
@@ -184,9 +188,11 @@ function App() {
             );
             transcriptLink = uploadResult.publicUrl;
             console.log("✅ Transcript uploaded successfully:", transcriptLink);
-          } catch (uploadError) {
-            console.error("Transcript upload failed:", uploadError);
+          } catch (uploadError: any) {
+            console.error("Transcript upload failed:", uploadError?.message || uploadError);
           }
+        } else {
+          console.warn("No currentInput available for upload");
         }
         
         const { recordId, reportLink } = await createBitableRecord(
@@ -198,7 +204,7 @@ function App() {
         );
         setBitableRecordId(recordId);
         setShareLink(reportLink);
-        console.log("✅ Auto-pushed to Feishu successfully");
+        console.log("✅ Auto-pushed to Feishu successfully with transcript:", transcriptLink);
     } catch (e: any) {
         console.error("Auto-push failed:", e);
     } finally {

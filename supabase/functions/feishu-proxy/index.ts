@@ -5,7 +5,7 @@ import { decode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-client-info, apikey, X-Requested-With",
 };
 
 serve(async (req) => {
@@ -64,6 +64,69 @@ serve(async (req) => {
         });
       } catch (e) {
          console.error("Upload handler error:", e);
+         return new Response(JSON.stringify({ error: "Processing failed: " + e.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    // 新的路由：上传逐字稿
+    if (path === "/feishu-proxy/upload-transcript" && req.method === "POST") {
+      try {
+        const body = await req.json();
+        const { content, filename, fileType } = body; 
+
+        if (!content) {
+             return new Response(JSON.stringify({ error: "No content data" }), { status: 400, headers: corsHeaders });
+        }
+
+        // Use Service Role Key for upload to ensure permission
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+        const adminSupabase = createClient(supabaseUrl, serviceKey);
+
+        const timestamp = Date.now();
+        const safeFilename = (filename || 'transcript').replace(/[\\/:*?"<>|]/g, '_');
+        const extension = fileType === 'pdf' ? 'pdf' : 'txt';
+        const storagePath = `${timestamp}_${safeFilename}.${extension}`;
+
+        let binaryData: Uint8Array;
+        let contentType: string;
+
+        if (fileType === 'pdf') {
+          // PDF content is base64 encoded
+          binaryData = decode(content);
+          contentType = 'application/pdf';
+        } else {
+          // Text content
+          const encoder = new TextEncoder();
+          binaryData = encoder.encode(content);
+          contentType = 'text/plain; charset=utf-8';
+        }
+
+        // Upload to 'transcripts' bucket
+        const { data, error } = await adminSupabase
+            .storage
+            .from('transcripts')
+            .upload(storagePath, binaryData, {
+                contentType: contentType,
+                upsert: false
+            });
+
+        if (error) {
+            console.error("Transcript upload error:", error);
+            return new Response(JSON.stringify({ error: "Upload failed: " + error.message }), { status: 500, headers: corsHeaders });
+        }
+
+        const { data: { publicUrl } } = adminSupabase
+            .storage
+            .from('transcripts')
+            .getPublicUrl(storagePath);
+
+        console.log("Transcript uploaded successfully:", publicUrl);
+
+        return new Response(JSON.stringify({ url: publicUrl, path: storagePath }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (e) {
+         console.error("Transcript upload handler error:", e);
          return new Response(JSON.stringify({ error: "Processing failed: " + e.message }), { status: 500, headers: corsHeaders });
       }
     }
