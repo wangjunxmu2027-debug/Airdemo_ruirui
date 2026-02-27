@@ -305,9 +305,19 @@ ${JSON.stringify(responseSchema, null, 2)}
     content = content.trim();
 
     // Check if the response contains an error message about invalid document format
-    if (content.includes('"error"') && content.includes('Invalid document format')) {
-      const parsedError = JSON.parse(content);
-      throw new Error(parsedError.error);
+    if (content.includes('"error"') && (content.includes('Invalid document format') || content.includes('文档类型异常'))) {
+      // 如果是直接的中文错误消息，直接抛出
+      if (content.includes('⚠️ 文档类型异常')) {
+        throw new Error(content);
+      }
+      // 如果是JSON格式的错误
+      try {
+        const parsedError = JSON.parse(content);
+        throw new Error(parsedError.error);
+      } catch (e) {
+        // 如果JSON解析失败，直接抛出原始内容
+        throw new Error(content);
+      }
     }
 
     return JSON.parse(content) as AnalysisResult;

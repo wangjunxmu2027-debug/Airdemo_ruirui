@@ -123,7 +123,7 @@ function App() {
       // Auto-save removed to allow screenshot
     } catch (err: any) {
       console.error(err);
-      if (err.message && err.message.includes('Invalid document format')) {
+      if (err.message && (err.message.includes('Invalid document format') || err.message.includes('文档类型异常'))) {
         // 如果是文档格式错误，立即设置校验失败状态
         setValidationStatus('failed');
         // 让加载动画显示校验失败
