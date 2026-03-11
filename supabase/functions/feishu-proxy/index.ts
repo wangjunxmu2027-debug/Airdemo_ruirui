@@ -215,20 +215,24 @@ serve(async (req) => {
           .from('transcripts')
           .upload(storagePath, binaryData, {
             contentType: contentType,
-            upsert: false
+            cacheControl: '3600'
           });
 
         if (uploadError) {
           console.error("Transcript upload error:", uploadError);
           // 上传失败不影响整体流程，只是逐字稿链接为空
         } else {
-          const { data: { publicUrl } } = adminSupabase
+          // 使用 getPublicUrl 方法生成正确的 URL
+          const { data: urlData } = adminSupabase
             .storage
             .from('transcripts')
             .getPublicUrl(storagePath);
-
+          
+          const publicUrl = urlData?.publicUrl || `${supabaseUrl}/storage/v1/s3/transcripts/${storagePath}`;
+          
           transcriptLink = publicUrl;
-          console.log("✅ Transcript uploaded:", storagePath, "URL:", publicUrl);
+          console.log("✅ Transcript uploaded:", storagePath);
+          console.log("✅ Public URL:", publicUrl);
         }
       } else {
         console.log("⚠️ No transcript payload provided");

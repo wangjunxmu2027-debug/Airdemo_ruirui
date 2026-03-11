@@ -171,6 +171,13 @@ function App() {
     if (!result) return;
     setIsPushing(true);
     try {
+        console.log("📤 Pushing to Feishu...");
+        console.log("   currentInput:", currentInput ? {
+          type: currentInput.type,
+          contentLength: currentInput.content?.length || 0,
+          filename: currentTitle
+        } : 'undefined');
+        
         const { recordId, reportLink } = await createBitableRecord(
           result,
           currentTitle,
