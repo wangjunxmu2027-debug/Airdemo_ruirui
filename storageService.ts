@@ -78,19 +78,28 @@ export const uploadBase64ToStorage = async (
 ): Promise<string> => {
   try {
     const timestamp = Date.now();
-    // 完全移除中文字符，只保留英文、数字、下划线和点
+    
+    // 优化文件名处理：保留英文、数字、下划线、点和连字符
+    // 中文文件名会被音译或替换，但保留可读性
     const safeFilename = filename
       .replace(/[\\/:*?"<>|]/g, '_')  // 替换特殊字符
-      .replace(/[^a-zA-Z0-9._-]/g, '_');  // 非英文字符替换为下划线
+      .replace(/\s+/g, '_')           // 空格替换为下划线
+      .replace(/[^a-zA-Z0-9._-]/g, '');  // 移除非英文字符（包括中文）
+    
+    // 如果文件名为空（纯中文），使用默认名称
+    const finalFilename = safeFilename || 'document';
     
     const customerNameSafe = customerName 
-      ? customerName.replace(/[\\/:*?"<>|]/g, '_').replace(/[^a-zA-Z0-9_-]/g, '_')
-      : 'unknown';
+      ? customerName.replace(/[\\/:*?"<>|]/g, '_').replace(/[^a-zA-Z0-9_-]/g, '')
+      : 'transcript';
     
-    // 文件命名格式：客户名称_时间戳_原始文件名（全部使用英文字符）
-    const storagePath = `${customerNameSafe}_${timestamp}_${safeFilename}`;
+    // 文件命名格式：客户名称_时间戳_原始文件名
+    const storagePath = `${customerNameSafe || 'transcript'}_${timestamp}_${finalFilename}`;
     
     console.log('📤 Uploading base64 content to Storage:', storagePath);
+    console.log('   Original filename:', filename);
+    console.log('   Safe filename:', finalFilename);
+    console.log('   Customer name:', customerNameSafe || 'transcript');
     
     // 解码 base64
     const binaryString = atob(base64Content);
