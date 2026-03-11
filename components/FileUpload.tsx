@@ -3,6 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { AnalysisInput } from '../types';
 import { fetchFeishuDocContent } from '../feishuService';
 import { extractMeetingDateFromText } from '../utils';
+import { extractTextFromPdfBase64 } from '../pdfUtils';
 
 interface Props {
   onAnalyze: (input: AnalysisInput) => void;
@@ -30,15 +31,28 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
     }
   }, []);
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     setFileName(file.name);
     
     if (file.type === 'application/pdf') {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const result = e.target?.result as string;
         const base64Content = result.split(',')[1];
-        onAnalyze({ type: 'pdf', content: base64Content, title: file.name });
+        
+        let transcriptText: string | undefined;
+        try {
+          transcriptText = await extractTextFromPdfBase64(base64Content);
+        } catch (error) {
+          console.error('Failed to extract text from PDF:', error);
+        }
+        
+        onAnalyze({ 
+          type: 'pdf', 
+          content: base64Content, 
+          title: file.name,
+          transcriptText: transcriptText 
+        });
       };
       reader.readAsDataURL(file);
     } else {
@@ -47,7 +61,13 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
         const text = e.target?.result as string;
         setTextInput(text);
         const meetingDate = extractMeetingDateFromText(text);
-        onAnalyze({ type: 'text', content: text, title: file.name, meetingDate: meetingDate || undefined });
+        onAnalyze({ 
+          type: 'text', 
+          content: text, 
+          title: file.name, 
+          meetingDate: meetingDate || undefined,
+          transcriptText: text 
+        });
       };
       reader.readAsText(file);
     }

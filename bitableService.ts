@@ -7,7 +7,7 @@ const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
 const extractMeetingDate = (analysisResult: AnalysisResult): string | null => {
   if (analysisResult.meetingDate) {
-    const match = analysisResult.meetingDate.match(/(\d{4})[年\/\-.](\d{1,2})[月\/\-.](\d{1,2})日?/);
+    const match = analysisResult.meetingDate.match(/(\d{4})[年\/\-.](\d{1,2})[月\/\-.](\d{1,2})日？/);
     if (match) {
       const year = match[1];
       const month = String(Number(match[2]));
@@ -28,7 +28,7 @@ const extractMeetingDate = (analysisResult: AnalysisResult): string | null => {
     });
   }
   const text = parts.join(' ');
-  const match = text.match(/(\d{4})[年\/\-.](\d{1,2})[月\/\-.](\d{1,2})日?/);
+  const match = text.match(/(\d{4})[年\/\-.](\d{1,2})[月\/\-.](\d{1,2})日？/);
   if (!match) return null;
   const year = match[1];
   const month = String(Number(match[2]));
@@ -49,13 +49,13 @@ export const createBitableRecord = async (
 
   try {
     // 优先使用 AI 提取的字段，如果未提取到则回退到默认值
-    // Customer Name: AI提取 > 文件名
+    // Customer Name: AI 提取 > 文件名
     const customerName = analysisResult.customerName || title;
     
-    // Reporter: AI提取 > 默认"售前顾问"
+    // Reporter: AI 提取 > 默认"售前顾问"
     const reporter = analysisResult.reporterName || analyst || '售前顾问';
     
-    // Summary: AI提取 > 执行摘要前50字
+    // Summary: AI 提取 > 执行摘要前 50 字
     const summary = analysisResult.reportSummary || (analysisResult.executiveSummary ? analysisResult.executiveSummary.slice(0, 100) + '...' : '无摘要');
 
     // 构造极简数据 - 仅包含用户指定的字段
@@ -68,25 +68,26 @@ export const createBitableRecord = async (
       [BITABLE_FIELDS.SUMMARY]: summary,
       [BITABLE_FIELDS.SCREENSHOT]: screenshotUrl,
       [BITABLE_FIELDS.SCORE]: analysisResult.totalScore,
-      [BITABLE_FIELDS.TRANSCRIPT_LINK]: '',
-      // 报告链接字段在 Edge Function 中生成并填充
+      [BITABLE_FIELDS.TRANSCRIPT_RAW]: '',  // 逐字稿原稿链接（在 Edge Function 中填充）
     };
 
     // 获取当前应用的基础 URL
     const appUrl = import.meta.env.VITE_APP_URL || window.location.origin;
 
+    // 传递 customerName 用于文件命名
     const { data, error } = await supabase.functions.invoke('feishu-proxy/save-and-webhook', {
       body: {
         webhookUrl: FEISHU_CONFIG.webhookUrl,
         reportData: reportData,
         originalData: analysisResult,
         appUrl: appUrl,
-        transcriptPayload: transcriptPayload
+        transcriptPayload: transcriptPayload,
+        customerName: customerName  // 传递客户名称用于文件命名
       }
     });
 
     if (error) {
-      throw new Error(`服务调用失败: ${error.message || '未知错误'}`);
+      throw new Error(`服务调用失败：${error.message || '未知错误'}`);
     }
 
     return { recordId: data.reportId, reportLink: data.shortLink };
@@ -110,7 +111,7 @@ export const getBitableRecord = async (recordId: string): Promise<any | null> =>
 
     const result = data;
     
-    // Edge Function 返回格式: { data: { id, title, data: AnalysisResult, ... } }
+    // Edge Function 返回格式：{ data: { id, title, data: AnalysisResult, ... } }
     // 我们需要返回内部的 AnalysisResult
     if (result.data && result.data.data) {
       return result.data.data;

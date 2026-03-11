@@ -9,8 +9,7 @@ export const BITABLE_FIELDS = {
   REPORTER: '汇报人',
   REPORT_DATE: '汇报日期',
   SUMMARY: '给谁汇报了什么',
-  SCREENSHOT: 'AI复盘截屏',
+  SCREENSHOT: 'AI 复盘截屏',
   SCORE: '汇报评分',
-  REPORT_LINK: '报告链接',
-  TRANSCRIPT_LINK: '逐字稿链接'
+  TRANSCRIPT_RAW: '逐字稿原稿'  // 逐字稿原稿链接
 };

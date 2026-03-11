@@ -134,7 +134,7 @@ serve(async (req) => {
     // 新的路由：保存报告并触发 Webhook
     if (path === "/feishu-proxy/save-and-webhook" && req.method === "POST") {
       const body = await req.json();
-      const { webhookUrl, reportData, originalData, appUrl, transcriptPayload } = body;
+      const { webhookUrl, reportData, originalData, appUrl, transcriptPayload, customerName } = body;
 
       if (!reportData || !webhookUrl) {
         return new Response(JSON.stringify({ error: "Missing reportData or webhookUrl" }), {
@@ -150,7 +150,7 @@ serve(async (req) => {
       const { data: savedReport, error: dbError } = await supabase
         .from('reports')
         .insert({
-          title: reportData['标题'] || '未命名报告',
+          title: reportData['客户名称'] || '未命名报告',
           data: dataToSave
         })
         .select()
@@ -176,14 +176,21 @@ serve(async (req) => {
 
       console.log("Generated Short Link:", shortLink);
 
-      let transcriptLink = reportData["逐字稿链接"];
+      // 获取逐字稿链接
+      let transcriptLink = "";
+      
       if (transcriptPayload?.content) {
         const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
         const adminSupabase = createClient(supabaseUrl, serviceKey);
         const timestamp = Date.now();
-        const safeFilename = (transcriptPayload.filename || 'transcript').replace(/[\\/:*?"<>|]/g, '_');
+        
+        // 使用客户名称作为文件名前缀，确保文件与客户关联
+        const customerNameSafe = customerName ? customerName.replace(/[\\/:*?"<>|]/g, '_') : 'unknown_customer';
+        const originalFilename = (transcriptPayload.filename || 'transcript').replace(/[\\/:*?"<>|]/g, '_');
         const extension = transcriptPayload.fileType === 'pdf' ? 'pdf' : 'txt';
-        const storagePath = `${timestamp}_${safeFilename}.${extension}`;
+        
+        // 文件命名格式：客户名称_时间戳_原始文件名。扩展名
+        const storagePath = `${customerNameSafe}_${timestamp}_${originalFilename}.${extension}`;
 
         let binaryData: Uint8Array;
         let contentType: string;
@@ -219,18 +226,24 @@ serve(async (req) => {
           .getPublicUrl(storagePath);
 
         transcriptLink = publicUrl;
+        console.log("Transcript uploaded:", storagePath, "URL:", publicUrl);
       }
 
-      // 2. 更新 reportData 中的链接字段
+      // 2. 构造 webhook payload - 只包含用户需要的字段
       const webhookPayload = {
-        ...reportData,
-        "报告链接": shortLink,
-        "AI复盘截屏": shortLink,
-        "逐字稿链接": transcriptLink || ""
+        [reportData['客户名称'] ? '客户名称' : '客户名称']: reportData['客户名称'] || '',
+        [reportData['汇报人'] ? '汇报人' : '汇报人']: reportData['汇报人'] || '',
+        [reportData['汇报日期'] ? '汇报日期' : '汇报日期']: reportData['汇报日期'] || '',
+        [reportData['给谁汇报了什么'] ? '给谁汇报了什么' : '给谁汇报了什么']: reportData['给谁汇报了什么'] || '',
+        [reportData['AI 复盘截屏'] ? 'AI 复盘截屏' : 'AI 复盘截屏']: shortLink,
+        [reportData['汇报评分'] ? '汇报评分' : '汇报评分']: reportData['汇报评分'] || 0,
+        [reportData['逐字稿原稿'] ? '逐字稿原稿' : '逐字稿原稿']: transcriptLink || ""
       };
 
       // 3. 发送 Webhook
       console.log("Forwarding to Webhook:", webhookUrl);
+      console.log("Webhook Payload:", JSON.stringify(webhookPayload, null, 2));
+      
       const webhookResponse = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -275,7 +275,7 @@ ${JSON.stringify(responseSchema, null, 2)}
         model: MODEL,
         messages: messages,
         temperature: 0.7,
-        max_tokens: 8192
+        max_tokens: 4096
       })
     });
 
