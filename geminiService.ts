@@ -231,16 +231,21 @@ export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisC
       content: systemPrompt
     });
 
+    // 检查内容长度，确保不超过 token 限制
+    const textContent = input.transcriptText || input.content;
+    if (textContent.length > 100000) {
+      console.warn(`内容过长 (${textContent.length} 字符)，可能会超过 token 限制`);
+    }
+    
     if (input.type === 'pdf') {
       // 对于 PDF，使用提取后的文本内容（如果有）
-      const textContent = input.transcriptText || input.content;
-      userMessage = `请分析以下会议逐字稿内容（从 PDF 提取）：\n\n${textContent}`;
+      userMessage = `请分析以下会议逐字稿内容（从 PDF 提取）：\n\n${textContent.substring(0, 100000)}`;
       messages.push({
         role: "user",
         content: userMessage
       });
     } else {
-      userMessage = `Here is the meeting transcript to analyze:\n\n${input.content}`;
+      userMessage = `Here is the meeting transcript to analyze:\n\n${input.content.substring(0, 100000)}`;
       messages.push({
         role: "user",
         content: userMessage
