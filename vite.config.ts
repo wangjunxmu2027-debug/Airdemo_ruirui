@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 8080,
+        port: 8082,
         host: '0.0.0.0',
       },
       plugins: [react()],
@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => {
         'process.env.API_KEY': JSON.stringify(env.API_KEY || env.GEMINI_API_KEY),
         'process.env.BASE_URL': JSON.stringify(env.BASE_URL || env.API_BASE_URL || ''),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+      },
+      optimizeDeps: {
+        include: ['pdfjs-dist']
       },
       // VITE_APP_URL 使用 VITE_ 前缀会被 Vite 自动注入到 import.meta.env
       resolve: {

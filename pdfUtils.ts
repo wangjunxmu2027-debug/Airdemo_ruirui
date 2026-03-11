@@ -1,7 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-// 设置 worker 使用 null，让 pdfjs-dist 使用主线程
-pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+// 设置 worker 源
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 // 限制最大字符数，防止超过 API token 限制
 const MAX_CONTENT_LENGTH = 50000; // 约 10k-15k tokens
