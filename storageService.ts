@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_CONFIG } from './supabaseConfig';
 
-const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+// 使用 Service Role Key 进行上传（需要有上传权限）
+const SUPABASE_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc3ZpZXNhZmZ6a3NqdXFieGV5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjQ1NTQzNSwiZXhwIjoyMDgyMDMxNDM1fQ.1cNvqdygZT00Y6YuDmSY_oXoRMVk6IWTk-4cx1zb5Do';
+
+const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_SERVICE_ROLE_KEY);
 
 /**
  * 上传文件到 Supabase Storage 的 transcripts bucket
@@ -75,15 +78,16 @@ export const uploadBase64ToStorage = async (
 ): Promise<string> => {
   try {
     const timestamp = Date.now();
-    // 替换所有特殊字符：空格、中文标点等
+    // 完全移除中文字符，只保留英文、数字、下划线和点
     const safeFilename = filename
       .replace(/[\\/:*?"<>|]/g, '_')  // 替换特殊字符
-      .replace(/\s+/g, '_');          // 替换空格为下划线
+      .replace(/[^a-zA-Z0-9._-]/g, '_');  // 非英文字符替换为下划线
+    
     const customerNameSafe = customerName 
-      ? customerName.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_')
+      ? customerName.replace(/[\\/:*?"<>|]/g, '_').replace(/[^a-zA-Z0-9_-]/g, '_')
       : 'unknown';
     
-    // 文件命名格式：客户名称_时间戳_原始文件名
+    // 文件命名格式：客户名称_时间戳_原始文件名（全部使用英文字符）
     const storagePath = `${customerNameSafe}_${timestamp}_${safeFilename}`;
     
     console.log('📤 Uploading base64 content to Storage:', storagePath);
