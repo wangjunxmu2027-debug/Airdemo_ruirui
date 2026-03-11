@@ -232,21 +232,12 @@ export const analyzeTranscript = async (input: AnalysisInput, config?: AnalysisC
     });
 
     if (input.type === 'pdf') {
-      // For PDF, we need to send as image/file content
-      // Most OpenAI-compatible APIs support base64 images in content array
-      userMessage = "Please analyze the meeting transcript contained in the attached PDF file.";
+      // 对于 PDF，使用提取后的文本内容（如果有）
+      const textContent = input.transcriptText || input.content;
+      userMessage = `请分析以下会议逐字稿内容（从 PDF 提取）：\n\n${textContent}`;
       messages.push({
         role: "user",
-        content: [
-          { type: "text", text: userMessage },
-          { 
-            type: "file",
-            file: {
-              filename: "transcript.pdf",
-              file_data: `data:application/pdf;base64,${input.content}`
-            }
-          }
-        ]
+        content: userMessage
       });
     } else {
       userMessage = `Here is the meeting transcript to analyze:\n\n${input.content}`;
@@ -275,7 +266,7 @@ ${JSON.stringify(responseSchema, null, 2)}
         model: MODEL,
         messages: messages,
         temperature: 0.7,
-        max_tokens: 4096
+        max_tokens: 8192
       })
     });
 

@@ -45,6 +45,7 @@ export interface AnalysisInput {
   content: string;
   title?: string;
   meetingDate?: string;
+  transcriptText?: string; // 提取后的 PDF 文本内容
 }
 
 export interface AnalysisConfig {
