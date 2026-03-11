@@ -75,8 +75,13 @@ export const uploadBase64ToStorage = async (
 ): Promise<string> => {
   try {
     const timestamp = Date.now();
-    const safeFilename = filename.replace(/[\\/:*?"<>|]/g, '_');
-    const customerNameSafe = customerName ? customerName.replace(/[\\/:*?"<>|]/g, '_') : 'unknown';
+    // 替换所有特殊字符：空格、中文标点等
+    const safeFilename = filename
+      .replace(/[\\/:*?"<>|]/g, '_')  // 替换特殊字符
+      .replace(/\s+/g, '_');          // 替换空格为下划线
+    const customerNameSafe = customerName 
+      ? customerName.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_')
+      : 'unknown';
     
     // 文件命名格式：客户名称_时间戳_原始文件名
     const storagePath = `${customerNameSafe}_${timestamp}_${safeFilename}`;
