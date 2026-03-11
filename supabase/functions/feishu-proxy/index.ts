@@ -179,7 +179,10 @@ serve(async (req) => {
       // 获取逐字稿链接
       let transcriptLink = "";
       
+      console.log("Checking transcriptPayload:", !!transcriptPayload, "content exists:", !!transcriptPayload?.content);
+      
       if (transcriptPayload?.content) {
+        console.log("Uploading transcript...");
         const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
         const adminSupabase = createClient(supabaseUrl, serviceKey);
         const timestamp = Date.now();
@@ -191,6 +194,7 @@ serve(async (req) => {
         
         // 文件命名格式：客户名称_时间戳_原始文件名。扩展名
         const storagePath = `${customerNameSafe}_${timestamp}_${originalFilename}.${extension}`;
+        console.log("Storage path:", storagePath);
 
         let binaryData: Uint8Array;
         let contentType: string;
@@ -198,10 +202,12 @@ serve(async (req) => {
         if (transcriptPayload.fileType === 'pdf') {
           binaryData = decode(transcriptPayload.content);
           contentType = 'application/pdf';
+          console.log("PDF content size:", binaryData.length, "bytes");
         } else {
           const encoder = new TextEncoder();
           binaryData = encoder.encode(transcriptPayload.content);
           contentType = 'text/plain; charset=utf-8';
+          console.log("Text content size:", binaryData.length, "bytes");
         }
 
         const { error: uploadError } = await adminSupabase
@@ -214,19 +220,18 @@ serve(async (req) => {
 
         if (uploadError) {
           console.error("Transcript upload error:", uploadError);
-          return new Response(JSON.stringify({ error: "Transcript upload failed: " + uploadError.message }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          // 上传失败不影响整体流程，只是逐字稿链接为空
+        } else {
+          const { data: { publicUrl } } = adminSupabase
+            .storage
+            .from('transcripts')
+            .getPublicUrl(storagePath);
+
+          transcriptLink = publicUrl;
+          console.log("✅ Transcript uploaded:", storagePath, "URL:", publicUrl);
         }
-
-        const { data: { publicUrl } } = adminSupabase
-          .storage
-          .from('transcripts')
-          .getPublicUrl(storagePath);
-
-        transcriptLink = publicUrl;
-        console.log("Transcript uploaded:", storagePath, "URL:", publicUrl);
+      } else {
+        console.log("⚠️ No transcript payload provided");
       }
 
       // 2. 构造 webhook payload - 只包含用户需要的字段
