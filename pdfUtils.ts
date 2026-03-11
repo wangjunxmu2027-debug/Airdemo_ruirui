@@ -1,7 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Set worker source
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// 禁用 worker，使用主线程处理
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 export const extractTextFromPdfBase64 = async (base64Content: string): Promise<string> => {
   try {
@@ -11,7 +11,10 @@ export const extractTextFromPdfBase64 = async (base64Content: string): Promise<s
       bytes[i] = binaryString.charCodeAt(i);
     }
     
-    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    const pdf = await pdfjsLib.getDocument({ 
+      data: bytes,
+      isEvalSupported: false
+    }).promise;
     let fullText = '';
     
     // Only extract first 3 pages for validation

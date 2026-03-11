@@ -310,17 +310,38 @@ ${JSON.stringify(responseSchema, null, 2)}
       if (content.includes('⚠️ 文档类型异常')) {
         throw new Error(content);
       }
-      // 如果是JSON格式的错误
+      // 如果是 JSON 格式的错误
       try {
         const parsedError = JSON.parse(content);
         throw new Error(parsedError.error);
       } catch (e) {
-        // 如果JSON解析失败，直接抛出原始内容
+        // 如果 JSON 解析失败，直接抛出原始内容
         throw new Error(content);
       }
     }
 
-    return JSON.parse(content) as AnalysisResult;
+    // 尝试解析 JSON，如果失败则尝试修复常见的 JSON 格式问题
+    try {
+      return JSON.parse(content) as AnalysisResult;
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      console.error("Raw content:", content);
+      
+      // 尝试修复未闭合的字符串问题
+      // 查找最后一个完整的对象闭合括号
+      const lastBrace = content.lastIndexOf('}');
+      if (lastBrace !== -1) {
+        const truncatedContent = content.substring(0, lastBrace + 1);
+        try {
+          return JSON.parse(truncatedContent) as AnalysisResult;
+        } catch (e) {
+          console.error("修复后的 JSON 仍然解析失败");
+        }
+      }
+      
+      // 如果还是失败，抛出原始错误
+      throw new SyntaxError(`JSON 解析失败：${parseError.message}. 原始内容：${content.substring(0, 500)}...`);
+    }
 
   } catch (error) {
     console.error("Error analyzing transcript:", error);
