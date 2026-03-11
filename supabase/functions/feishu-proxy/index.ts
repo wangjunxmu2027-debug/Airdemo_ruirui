@@ -134,7 +134,7 @@ serve(async (req) => {
     // 新的路由：保存报告并触发 Webhook
     if (path === "/feishu-proxy/save-and-webhook" && req.method === "POST") {
       const body = await req.json();
-      const { webhookUrl, reportData, originalData, appUrl, transcriptPayload, customerName } = body;
+      const { webhookUrl, reportData, originalData, appUrl, transcriptPayload, transcriptUrl, customerName } = body;
 
       if (!reportData || !webhookUrl) {
         return new Response(JSON.stringify({ error: "Missing reportData or webhookUrl" }), {
@@ -180,8 +180,13 @@ serve(async (req) => {
       let transcriptLink = "";
       
       console.log("Checking transcriptPayload:", !!transcriptPayload, "content exists:", !!transcriptPayload?.content);
+      console.log("Checking transcriptUrl:", transcriptUrl);
       
-      if (transcriptPayload?.content) {
+      // 优先使用已有的 transcriptUrl
+      if (transcriptUrl) {
+        transcriptLink = transcriptUrl;
+        console.log("✅ Using existing transcript URL:", transcriptLink);
+      } else if (transcriptPayload?.content) {
         console.log("Uploading transcript...");
         const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '';
         const adminSupabase = createClient(supabaseUrl, serviceKey);
@@ -235,7 +240,7 @@ serve(async (req) => {
           console.log("✅ Public URL:", publicUrl);
         }
       } else {
-        console.log("⚠️ No transcript payload provided");
+        console.log("⚠️ No transcript payload or URL provided");
       }
 
       // 2. 构造 webhook payload - 只包含用户需要的字段

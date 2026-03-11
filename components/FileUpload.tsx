@@ -4,6 +4,7 @@ import { AnalysisInput } from '../types';
 import { fetchFeishuDocContent } from '../feishuService';
 import { extractMeetingDateFromText } from '../utils';
 import { extractTextFromPdfBase64 } from '../pdfUtils';
+import { uploadBase64ToStorage } from '../storageService'; // 新增导入
 
 interface Props {
   onAnalyze: (input: AnalysisInput) => void;
@@ -41,17 +42,28 @@ const FileUpload: React.FC<Props> = ({ onAnalyze, isLoading }) => {
         const base64Content = result.split(',')[1];
         
         let transcriptText: string | undefined;
+        let transcriptUrl: string | undefined;
+        
         try {
+          // 1. 提取文本用于 AI 分析
           transcriptText = await extractTextFromPdfBase64(base64Content);
+          
+          // 2. 上传到 Storage 获取 URL
+          transcriptUrl = await uploadBase64ToStorage(
+            base64Content,
+            file.name,
+            'pdf'
+          );
         } catch (error) {
-          console.error('Failed to extract text from PDF:', error);
+          console.error('Failed to process PDF:', error);
         }
         
         onAnalyze({ 
           type: 'pdf', 
           content: base64Content, 
           title: file.name,
-          transcriptText: transcriptText 
+          transcriptText: transcriptText,
+          transcriptUrl: transcriptUrl  // 新增 URL 字段
         });
       };
       reader.readAsDataURL(file);

@@ -175,19 +175,27 @@ function App() {
         console.log("   currentInput:", currentInput ? {
           type: currentInput.type,
           contentLength: currentInput.content?.length || 0,
-          filename: currentTitle
+          filename: currentTitle,
+          transcriptUrl: currentInput.transcriptUrl || 'will be uploaded'
         } : 'undefined');
+        
+        // 如果已经有 transcriptUrl，说明文件已经上传到 Storage，直接使用
+        // 否则，传递 transcriptPayload 让 Edge Function 上传
+        const transcriptPayload = currentInput?.transcriptUrl 
+          ? undefined  // 已有 URL，不需要再上传
+          : currentInput ? {
+              content: currentInput.content,
+              filename: currentTitle || '逐字稿',
+              fileType: currentInput.type
+            }
+          : undefined;
         
         const { recordId, reportLink } = await createBitableRecord(
           result,
           currentTitle,
           '售前顾问',
-          '',
-          currentInput ? {
-            content: currentInput.content,
-            filename: currentTitle || '逐字稿',
-            fileType: currentInput.type
-          } : undefined
+          currentInput?.transcriptUrl || '',  // 传递已有的 URL
+          transcriptPayload
         );
         setBitableRecordId(recordId);
         setShareLink(reportLink);

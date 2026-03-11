@@ -41,7 +41,8 @@ export const createBitableRecord = async (
   title: string,
   analyst: string = '未知',
   screenshotUrl: string = '',
-  transcriptPayload?: { content: string; filename: string; fileType: 'text' | 'pdf' }
+  transcriptPayload?: { content: string; filename: string; fileType: 'text' | 'pdf' },
+  transcriptUrl?: string  // 新增参数
 ): Promise<{ recordId: string; reportLink: string }> => {
   if (!FEISHU_CONFIG.webhookUrl) {
     throw new Error('未配置飞书 Webhook URL');
@@ -68,7 +69,7 @@ export const createBitableRecord = async (
       [BITABLE_FIELDS.SUMMARY]: summary,
       [BITABLE_FIELDS.SCREENSHOT]: screenshotUrl,
       [BITABLE_FIELDS.SCORE]: analysisResult.totalScore,
-      [BITABLE_FIELDS.TRANSCRIPT_RAW]: '',  // 逐字稿原稿链接（在 Edge Function 中填充）
+      [BITABLE_FIELDS.TRANSCRIPT_RAW]: transcriptUrl || '',  // 逐字稿原稿链接（如果已有 URL 则使用，否则在 Edge Function 中填充）
     };
 
     // 获取当前应用的基础 URL
@@ -82,6 +83,7 @@ export const createBitableRecord = async (
         originalData: analysisResult,
         appUrl: appUrl,
         transcriptPayload: transcriptPayload,
+        transcriptUrl: transcriptUrl,  // 传递已有的 URL
         customerName: customerName  // 传递客户名称用于文件命名
       }
     });
