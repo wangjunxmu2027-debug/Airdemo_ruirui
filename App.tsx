@@ -223,6 +223,21 @@ function App() {
 
   return (
     <div className="min-h-screen bg-feishu-bg pb-12 relative">
+      {/* Announcement Banner */}
+      <div className="bg-blue-50 border-b border-blue-100 px-4 py-3 text-center">
+        <p className="text-sm text-blue-800 font-medium">
+          📢 此网站已迁移至飞书BOT，请在飞书内搜索“睿睿”进行复盘。
+          <a 
+            href="https://applink.larkoffice.com/T951Lzf8PZDn" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="ml-2 text-feishu-blue hover:underline font-bold"
+          >
+            点击前往体验 →
+          </a>
+        </p>
+      </div>
+
       {/* Settings Modal */}
       {showSettings && (
         <PromptSettings 
